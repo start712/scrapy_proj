@@ -91,9 +91,9 @@ class controller(object):
                 rows = csv.reader(f)
                 for row in rows:
                     if row:
-                        s = s + ",".join(row) + '\n'
+                        s = s + ",".join(row[:4]) + '\n'
 
-            #self.pymail.send_mail(report_file, "发现新的公告！！", txt=s, to_mail='619978637@qq.com')
+            self.pymail.send_mail(report_file, "发现新的公告！！", txt=s, to_mail='619978637@qq.com')
 
             print u"有新的公告！！！已存入NEW.csv!!!!\n" * 3
 
@@ -142,7 +142,7 @@ class controller(object):
                         rows = csv.reader(f)
                         for row in rows:
                             if row:
-                                s = s + ",".join(row) + '\n'
+                                s = s + ",".join(row[:4]) + '\n'
 
                     self.pymail.send_mail(report_file, "发现新的公告！！", txt=s, to_mail='619978637@qq.com')
 
