@@ -100,7 +100,7 @@ class controller(object):
         else:
             print u"没有发现新的内容！\n" * 3
 
-        # 发送log
+        # 发送log~~~~~~~~~~~~
         date0 = datetime.datetime.date(datetime.datetime.today()+datetime.timedelta(days=-1))
         log_file = [
             r'%s/log/sql_update(%s).log' % (os.getcwd(), date0),
