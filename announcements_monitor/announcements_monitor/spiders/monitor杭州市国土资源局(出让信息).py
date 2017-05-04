@@ -12,6 +12,7 @@ import os
 import scrapy
 import announcements_monitor.items
 import re
+import traceback
 import datetime
 import bs4
 import json
@@ -68,7 +69,7 @@ class Spider(scrapy.Spider):
                 item['monitor_re'] = r'杭政储出.*'
                 yield scrapy.Request(item['monitor_url'],meta={'item':item},callback=self.parse2, dont_filter=False)
             else:
-                yield
+                yield item
 
     def parse1(self, response):
         """关键词：杭政工出"""
@@ -109,8 +110,7 @@ class Spider(scrapy.Spider):
                 item['content_detail'] = content_detail
                 yield item
             except:
-                info = sys.exc_info()
-                log_obj.error(u"%s（%s）中无法解析%s\n原因：%s%s%s" % (self.name, response.url, site, info[0], ":", info[1]))
+                log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
                 yield response.meta['item']
 
     def parse2(self, response):
@@ -159,8 +159,7 @@ class Spider(scrapy.Spider):
                 #log_obj.debug("item:%s" % str(item))
                 yield item
             except:
-                info = sys.exc_info()
-                log_obj.error(u"%s（%s）中无法解析%s\n原因：%s%s%s" % (self.name, response.url, site, info[0], ":", info[1]))
+                log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
                 yield response.meta['item']
 
 if __name__ == '__main__':

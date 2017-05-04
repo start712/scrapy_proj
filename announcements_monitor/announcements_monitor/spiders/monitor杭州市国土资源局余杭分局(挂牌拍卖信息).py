@@ -9,7 +9,7 @@
 """
 import sys
 import os
-
+import traceback
 import re
 
 import bs4
@@ -103,8 +103,7 @@ class Spider(scrapy.Spider):
                 item['content_detail'] = content_detail
                 yield item
             except:
-                info = sys.exc_info()
-                log_obj.error(u"%s（%s）中无法解析%s\n原因：%s%s%s" % (self.name, response.url, site, info[0], ":", info[1]))
+                log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
                 yield response.meta['item']
 
     def parse2(self, response):
@@ -132,8 +131,7 @@ class Spider(scrapy.Spider):
                 item['content_detail'] = content_detail
                 yield item
             except:
-                info = sys.exc_info()
-                log_obj.error(u"%s（%s）中无法解析%s\n原因：%s%s%s" % (self.name, response.url, site, info[0], ":", info[1]))
+                log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
                 yield response.meta['item']
 
 if __name__ == '__main__':

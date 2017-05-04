@@ -14,6 +14,7 @@ import announcements_monitor.items
 import re
 import datetime
 import bs4
+import traceback
 log_path = r'%s/log/spider_DEBUG(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
 
 sys.path.append(sys.prefix + "\\Lib\\MyWheels")
@@ -102,7 +103,7 @@ class Spider(scrapy.Spider):
 
                 # 建筑面积有时会杂有文字
                 if '地上' in content_detail['building_area']:
-                    content_detail['building_area'] = re.search(r'(?<=地上建筑面积)\d+(?=平方米)|(?<=地上)\d+(?=平方米)', site[4].get_text(strip=True)).group(0)
+                    content_detail['building_area'] = re.search(ur'(?<=地上建筑面积)\d+(?=平方米)|(?<=地上)\d+(?=平方米)', site[4].get_text(strip=True)).group(0)
                     content_detail['addition'][u'建筑面积（M2）'] = site[4].get_text(strip=True)
                 elif '地下' in content_detail['building_area']:
                     content_detail['building_area'] =''
@@ -111,8 +112,7 @@ class Spider(scrapy.Spider):
                 item['content_detail'] = content_detail
                 yield item
             except:
-                info = sys.exc_info()
-                log_obj.error(u"%s（%s）中无法解析%s\n原因：%s%s%s" % (self.name, response.url, site, info[0], ":", info[1]))
+                log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
                 yield response.meta['item']
 
 if __name__ == '__main__':

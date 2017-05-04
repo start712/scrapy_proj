@@ -9,7 +9,7 @@
 """
 import sys
 import os
-
+import traceback
 import bs4
 import scrapy
 import announcements_monitor.items
@@ -68,8 +68,7 @@ class Spider(scrapy.Spider):
                 item["monitor_content"] = u"土地坐落:%s,出让面积（平方米）:%s,土地用途:%s,总成交价（万元）:%s,竞得人:%s" %(location,offer_area,purpose,transaction_price_sum,competitive_person)
 
             except:
-                info = sys.exc_info()
-                log_obj.error(u"%s（%s）中无法解析%s\n原因：%s%s%s" % (self.name, response.url, site, info[0], ":", info[1]))
+                log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
 
         #csv_report.output_data(items, "result", method='a')
             if re.search(r'.*余政工出.*', item['monitor_title'].encode('utf8')):
@@ -110,8 +109,7 @@ class Spider(scrapy.Spider):
                 item['content_detail'] = content_detail
                 yield item
             except:
-                info = sys.exc_info()
-                log_obj.error(u"%s（%s）中无法解析%s\n原因：%s%s%s" % (self.name, response.url, site, info[0], ":", info[1]))
+                log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
                 yield response.meta['item']
 
     def parse2(self, response):
@@ -140,8 +138,7 @@ class Spider(scrapy.Spider):
                 item['content_detail'] = content_detail
                 yield item
             except:
-                info = sys.exc_info()
-                log_obj.error(u"%s（%s）中无法解析%s\n原因：%s%s%s" % (self.name, response.url, site, info[0], ":", info[1]))
+                log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
                 yield response.meta['item']
 
 if __name__ == '__main__':
