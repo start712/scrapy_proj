@@ -15,50 +15,55 @@ sys.path.append(sys.prefix + "\\Lib\\MyWheels")
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-import smtplib, mimetypes
+from email import encoders, MIMEBase, MIMEMultipart
+from email.header import Header
 from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.image import MIMEImage
-
-mail_host = "smtp.163.com"
-mail_user = "from"
-mail_pass = "li90"
-mail_postfix = "163.com"
+from email.utils import parseaddr, formataddr
+import smtplib
 
 
 class pymail(object):
     def __init__(self):
         pass
 
-    ######################
+    def _format_addr(self, s):
+        name, addr = parseaddr(s)
+        return formataddr((Header(name, 'utf-8').encode(),addr.encode('utf-8') if isinstance(addr, unicode) else addr))
+
+
     def send_mail(self, file_list, title = "Python邮件", txt = "邮件内容(空)", to_mail = '3118734521@qq.com'):
-        msg = MIMEMultipart()
-        msg['From'] = "start_spider@sina.com"
-        msg['To'] = to_mail
-        msg['Subject'] = title
+        from_addr = 'startspider@163.com'
+        password = 'start123456789'
+        to_addr = to_mail
+        smtp_server = 'smtp.163.com'
 
-        # 添加邮件内容
-        txt = MIMEText(txt)
-        msg.attach(txt)
+        msg = MIMEMultipart.MIMEMultipart()
+        msg['From'] = self._format_addr(from_addr)
+        msg['To'] = self._format_addr(to_addr)
+        msg['Subject'] = Header(title, 'utf-8').encode()
+        # 邮件正文是MIMEText:
+        msg.attach(MIMEText(txt, 'plain', 'utf-8'))
 
-        # 添加二进制附件
-        if file_list:
-            for fileName in file_list:
-                ctype, encoding = mimetypes.guess_type(fileName)
-                if ctype is None or encoding is not None:
-                    ctype = 'application/octet-stream'
-                maintype, subtype = ctype.split('/', 1)
-                att1 = MIMEImage((lambda f: (f.read(), f.close()))(open(fileName, 'rb'))[0], _subtype=subtype)
-                att1.add_header('Content-Disposition', 'attachment', filename=fileName)
-                msg.attach(att1)
+        for file_name in file_list:
+            with open(file_name, 'rb') as f:
+                # 设置附件的MIME和文件名，这里是png类型:
+                mime = MIMEBase.MIMEBase('NEW', 'csv', filename=file_name)
+                # 加上必要的头信息:
+                mime.add_header('Content-Disposition', 'attachment', filename=file_name)
+                mime.add_header('Content-ID', '<0>')
+                mime.add_header('X-Attachment-Id', '0')
+                # 把附件的内容读进来:
+                mime.set_payload(f.read())
+                # 用Base64编码:
+                encoders.encode_base64(mime)
+                # 添加到MIMEMultipart:
+                msg.attach(mime)
 
-        # 发送邮件
-        smtp = smtplib.SMTP()
-        smtp.connect('smtp.sina.com')
-        smtp.login('start_spider', 'start12345')
-        smtp.sendmail(msg['From'], msg['To'], msg.as_string())
-        smtp.quit()
-        print u'to_mail=%s邮件发送成功' %to_mail
+        server = smtplib.SMTP(smtp_server)#, 25)
+        server.set_debuglevel(1)
+        server.login(from_addr, password)
+        server.sendmail(from_addr, [to_addr], msg.as_string())
+        server.quit()
 
 if __name__ == '__main__':
     pymail = pymail()
@@ -69,4 +74,4 @@ if __name__ == '__main__':
             if row:
                 s = s + ",".join(row) + '\n'
 
-    pymail.send_mail("NEW.csv", txt = s )
+    pymail.send_mail(["NEW.csv",], txt = s )

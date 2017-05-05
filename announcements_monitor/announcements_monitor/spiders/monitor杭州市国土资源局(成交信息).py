@@ -103,7 +103,9 @@ class Spider(scrapy.Spider):
 
                 # 建筑面积有时会杂有文字
                 if '地上' in content_detail['building_area']:
-                    content_detail['building_area'] = re.search(ur'(?<=地上建筑面积)\d+(?=平方米)|(?<=地上)\d+(?=平方米)', site[4].get_text(strip=True)).group(0)
+                    m = re.search(ur'(?<=地上建筑面积)\d+(?=平方米)|(?<=地上)\d+(?=平方米)', site[4].get_text(strip=True))
+                    if m:
+                        content_detail['building_area'] = m.group(0)
                     content_detail['addition'][u'建筑面积（M2）'] = site[4].get_text(strip=True)
                 elif '地下' in content_detail['building_area']:
                     content_detail['building_area'] =''

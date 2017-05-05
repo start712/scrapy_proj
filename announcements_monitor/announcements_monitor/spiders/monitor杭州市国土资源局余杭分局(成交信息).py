@@ -125,7 +125,6 @@ class Spider(scrapy.Spider):
 
         for i in xrange(len(sites)):
             site = sites[i]
-            log_obj.debug('site[0].get_text(strip=True):%s' %type(site[0].get_text(strip=True)))
             try:
                 content_detail =\
                             {'parcel_no': site[0].get_text(strip=True),
