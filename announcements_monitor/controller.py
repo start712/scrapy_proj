@@ -82,6 +82,8 @@ class controller(object):
         # 启动爬虫
         self.start_spider(spider_id)
 
+        print u'爬虫运行完毕'
+
         # 有新内容的话，发送邮件
         report_file = ['NEW.csv',]
         if ('save' not in commands and os.path.exists(file_name)) \
@@ -100,7 +102,7 @@ class controller(object):
         else:
             print u"没有发现新的内容！\n" * 3
 
-        # 发送log~~~~~~~~~~~~
+        # 发送log
         date0 = datetime.datetime.date(datetime.datetime.today()+datetime.timedelta(days=-1))
         log_file = [
             r'%s/log/sql_update(%s).log' % (os.getcwd(), date0),
@@ -133,6 +135,8 @@ class controller(object):
 
                 # 启动爬虫
                 self.start_spider('monitor')
+
+                print u'爬虫运行完毕'
 
                 # 有新内容的话，发送邮件
                 report_file = ['NEW.csv',]
