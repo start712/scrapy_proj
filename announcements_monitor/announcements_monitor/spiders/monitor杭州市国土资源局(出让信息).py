@@ -81,7 +81,6 @@ class Spider(scrapy.Spider):
         if not sites:
             log_obj.debug(u"%s(%s)没有检测到更多detail" %(self.name, response.url))
 
-        #log_obj.debug(u"sites: %s" %str([site[0].get_text(strip=True) for site in sites]))
         for i in xrange(len(sites)):
             site = sites[i]
             try:

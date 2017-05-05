@@ -196,7 +196,6 @@ class Spider(scrapy.Spider):
             site = sites[i]
             try:
                 # 过滤空白表格
-                #if re.search(r'.*\xa0.*', site[0].get_text(strip=True), re.M):
                 if not site[0].get_text(strip=True):
                     continue
 
