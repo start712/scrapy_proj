@@ -32,6 +32,7 @@ class pymail(object):
 
 
     def send_mail(self, file_list, title = "Python邮件", txt = "邮件内容(空)", to_mail = '3118734521@qq.com'):
+        print u'准备发送邮件给%s' %to_mail
         from_addr = 'startspider@163.com'
         password = 'start123456789'
         to_addr = to_mail
@@ -65,6 +66,7 @@ class pymail(object):
         server.login(from_addr, password)
         server.sendmail(from_addr, [to_addr], msg.as_string())
         server.quit()
+        print u'邮件发送成功'
 
 if __name__ == '__main__':
     pymail = pymail()
