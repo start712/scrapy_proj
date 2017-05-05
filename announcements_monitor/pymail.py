@@ -44,20 +44,21 @@ class pymail(object):
         # 邮件正文是MIMEText:
         msg.attach(MIMEText(txt, 'plain', 'utf-8'))
 
-        for file_name in file_list:
-            with open(file_name, 'rb') as f:
-                # 设置附件的MIME和文件名，这里是png类型:
-                mime = MIMEBase.MIMEBase('NEW', 'csv', filename=file_name)
-                # 加上必要的头信息:
-                mime.add_header('Content-Disposition', 'attachment', filename=file_name)
-                mime.add_header('Content-ID', '<0>')
-                mime.add_header('X-Attachment-Id', '0')
-                # 把附件的内容读进来:
-                mime.set_payload(f.read())
-                # 用Base64编码:
-                encoders.encode_base64(mime)
-                # 添加到MIMEMultipart:
-                msg.attach(mime)
+        if file_list:
+            for file_name in file_list:
+                with open(file_name, 'rb') as f:
+                    # 设置附件的MIME和文件名，这里是png类型:
+                    mime = MIMEBase.MIMEBase('NEW', 'csv', filename=file_name)
+                    # 加上必要的头信息:
+                    mime.add_header('Content-Disposition', 'attachment', filename=file_name)
+                    mime.add_header('Content-ID', '<0>')
+                    mime.add_header('X-Attachment-Id', '0')
+                    # 把附件的内容读进来:
+                    mime.set_payload(f.read())
+                    # 用Base64编码:
+                    encoders.encode_base64(mime)
+                    # 添加到MIMEMultipart:
+                    msg.attach(mime)
 
         server = smtplib.SMTP(smtp_server)#, 25)
         server.set_debuglevel(1)
