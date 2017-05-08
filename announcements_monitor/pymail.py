@@ -33,10 +33,10 @@ class pymail(object):
 
     def send_mail(self, file_list, title = "Python邮件", txt = "邮件内容(空)", to_mail = '3118734521@qq.com'):
         print u'准备发送邮件给%s' %to_mail
-        from_addr = 'startspider@163.com'
-        password = 'start123456789'
+        from_addr = 'start712@aliyun.com'
+        password = 'start12345'
         to_addr = to_mail
-        smtp_server = 'smtp.163.com'
+        smtp_server = 'smtp.aliyun.com'
 
         msg = MIMEMultipart.MIMEMultipart()
         msg['From'] = self._format_addr(from_addr)
