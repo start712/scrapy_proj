@@ -84,46 +84,12 @@ class controller(object):
 
         print u'爬虫运行完毕'
 
-        # 有新内容的话，发送邮件
-        report_file = ['NEW.csv',]
-        if ('save' not in commands and os.path.exists(file_name)) \
-           or ('save' in commands and os.path.getsize(file_name)>csv_size):
-            s = ""
-            with open(report_file[0], 'rb') as f:
-                rows = csv.reader(f)
-                for row in rows:
-                    if row:
-                        s = s + ",".join(row[:3]) + '\n'
-
-            self.pymail.send_mail(report_file, "发现新的公告！！", txt=s, to_mail='619978637@qq.com')
-
-            print u"有新的公告！！！已存入NEW.csv!!!!\n" * 3
-
-        else:
-            print u"没有发现新的内容！\n" * 3
-
-        # 发送log
-        date0 = datetime.datetime.date(datetime.datetime.today()+datetime.timedelta(days=-1))
-        log_file = [
-            r'%s/log/sql_update(%s).log' % (os.getcwd(), date0),
-            r'%s/log/spider(%s).log' % (os.getcwd(), date0)
-        ]
-        if os.path.exists(log_file[0]) and os.path.exists(log_file[1]):
-            title = "日常报告%s" %date0
-            if os.path.getsize(log_file[1]) == 0:
-                title = "新的BUG报告%s" % date0
-
-            self.pymail.send_mail(log_file, title, txt="", to_mail='3118734521@qq.com')
-            for f in log_file: #发送过的文件，改掉文件名，避免多次发送发给
-                os.rename(f, f+"_")
-        elif os.path.exists(log_file[0] + "_") and os.path.exists(log_file[1] + "_"):
-            print u'不需要发送log邮件'
-        else:
-            self.pymail.send_mail(None, "爬虫报告%s缺少文件" %date0, to_mail='3118734521@qq.com')
+        self.report()
 
         print u"爬取结束！！！！！"
         print u"爬取结束！！！！！"
         print u"爬取结束！！！！！"
+
 
     def timer(self):
         while True:
@@ -138,47 +104,52 @@ class controller(object):
 
                 print u'爬虫运行完毕'
 
-                # 有新内容的话，发送邮件
-                report_file = ['NEW.csv',]
-                if os.path.exists(file_name):
-                    s = ""
-                    with open(report_file[0], 'rb') as f:
-                        rows = csv.reader(f)
-                        for row in rows:
-                            if row:
-                                s = s + ",".join(row[:4]) + '\n'
-
-                    self.pymail.send_mail(report_file, "发现新的公告！！", txt=s, to_mail='619978637@qq.com')
-
-                    print u"有新的公告！！！已存入NEW.csv!!!!\n" * 3
-
-                else:
-                    print u"没有发现新的内容！\n" * 3
-
-                # 发送log
-                date0 = datetime.datetime.date(datetime.datetime.today()+datetime.timedelta(days=-1))
-                log_file = [
-                    r'%s/log/sql_update(%s).log' % (os.getcwd(), date0),
-                    r'%s/log/spider(%s).log' % (os.getcwd(), date0)
-                ]
-                if os.path.exists(log_file[0]) and os.path.exists(log_file[1]):
-                    title = "日常报告%s" %date0
-                    if os.path.getsize(log_file[1]) == 0:
-                        title = "新的BUG报告%s" % date0
-
-                    self.pymail.send_mail(log_file, title, txt="", to_mail='3118734521@qq.com')
-                    for f in log_file: #发送过的文件，改掉文件名，避免多次发送发给
-                        os.rename(f, f+"_")
-                elif os.path.exists(log_file[0] + "_") and os.path.exists(log_file[1] + "_"):
-                    print u'不需要发送log邮件'
-                else:
-                    self.pymail.send_mail(None, "爬虫报告%s缺少文件" %date0, to_mail='3118734521@qq.com')
+                self.report()
 
                 print u"爬取结束！！！！！"
                 print u"爬取结束！！！！！"
                 print u"爬取结束！！！！！"
             #规定间隔时间
             time.sleep(28800)
+
+    def report(self):
+
+        # 有新内容的话，发送邮件
+        report_file = ['NEW.csv', ]
+        if os.path.exists(file_name):
+            s = ""
+            with open(report_file[0], 'rb') as f:
+                rows = csv.reader(f)
+                for row in rows:
+                    if row:
+                        s = s + ",".join(row[:4]) + '\n'
+
+            self.pymail.send_mail(report_file, "发现新的公告！！", txt=s, to_mail='619978637@qq.com')
+
+            print u"有新的公告！！！已存入NEW.csv!!!!\n" * 3
+
+        else:
+            print u"没有发现新的内容！\n" * 3
+
+        # 发送log
+        date0 = datetime.datetime.date(datetime.datetime.today() + datetime.timedelta(days=-1))
+        log_file = [
+            r'%s/log/sql_update(%s).log' % (os.getcwd(), date0),
+            r'%s/log/spider(%s).log' % (os.getcwd(), date0)
+        ]
+        if os.path.exists(log_file[0]) and os.path.exists(log_file[1]):
+            title = "日常报告%s" % date0
+            if os.path.getsize(log_file[1]) == 0:
+                title = "新的BUG报告%s" % date0
+
+            self.pymail.send_mail(log_file, title, txt="", to_mail='3118734521@qq.com')
+            for f in log_file:  # 发送过的文件，改掉文件名，避免多次发送发给
+                os.rename(f, f + "_")
+        elif os.path.exists(log_file[0] + "_") and os.path.exists(log_file[1] + "_"):
+            print u'不需要发送log邮件'
+        else:
+            self.pymail.send_mail(None, "爬虫报告%s缺少文件" % date0, to_mail='3118734521@qq.com')
+
 
 if __name__ == '__main__':
     controller = controller()
