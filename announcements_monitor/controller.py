@@ -76,8 +76,8 @@ class controller(object):
         # 执行save命令
         if 'save' not in commands:
             self.initialize()
-        else:
-            csv_size = os.path.getsize(file_name)
+        #else:
+        #    csv_size = os.path.getsize(file_name)
 
         # 启动爬虫
         self.start_spider(spider_id)
@@ -122,7 +122,7 @@ class controller(object):
                 rows = csv.reader(f)
                 for row in rows:
                     if row:
-                        s = s + ",".join(row[:4]) + '\n'
+                        s = s + ",".join(row[:3]) + '\n'
 
             self.pymail.send_mail(report_file, "发现新的公告！！", txt=s, to_mail='619978637@qq.com')
 
