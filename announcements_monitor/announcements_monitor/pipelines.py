@@ -111,7 +111,7 @@ class AnnouncementsMonitorPipeline(object):
             if params:
                 log_obj.debug(u"key saved:%s" % item["monitor_key"])
                 csv_report.output_data([params,], "NEW", title=[u'爬虫编号', u'标题', u'主键', u'发布日期', u'链接', u'其他内容'], method = "a")
-        except IntegrityError:
+        except MySQLdb.IntegrityError:
             logger0.info(params)
         else:
             log_obj.debug(u"sql insert failed:%s\nINFO:%s" %(item["monitor_key"],traceback.format_exc()))
