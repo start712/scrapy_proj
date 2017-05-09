@@ -13,6 +13,7 @@ import datetime
 import os
 import json
 import copy
+import traceback
 log_path = r'%s/log/sql_update(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
 
 sys.path.append(sys.prefix + "\\Lib\\MyWheels")
@@ -95,8 +96,7 @@ class AnnouncementsMonitorPipeline(object):
                 log_obj.debug(u"key saved:%s" % item["monitor_key"])
                 csv_report.output_data([params,], "NEW", title=[u'爬虫编号', u'标题', u'主键', u'发布日期', u'链接', u'其他内容'], method = "a")
         except:
-            info = sys.exc_info()
-            log_obj.debug(u"sql insert failed:%s\nINFO:%s%s%s" %(item["monitor_key"],info[0], ":", info[1]))
+            log_obj.debug(u"sql insert failed:%s\nINFO:%s" %(item["monitor_key"],traceback.format_exc()))
 
 
     #错误处理方法
