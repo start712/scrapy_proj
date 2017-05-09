@@ -57,6 +57,8 @@ class controller(object):
             command = raw_input(u"请输入指令：")
             print u"输入的指令为：%s" %command
             commands.add(command)
+            if command == 'timer':
+                self.timer()
 
             if command.find('go')>=0: #判断输入命令是否正确
                 go_command = command
