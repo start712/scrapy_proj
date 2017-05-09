@@ -61,8 +61,10 @@ class pymail(object):
                     # 添加到MIMEMultipart:
                     msg.attach(mime)
 
-        server = smtplib.SMTP(smtp_server, 25)
+        #server = smtplib.SMTP(smtp_server, 25)
+        server = smtplib.SMTP_SSL(smtp_server, 465)
         server.set_debuglevel(1)
+        server.ehlo()
         server.login(from_addr, password)
         server.sendmail(from_addr, [to_addr], msg.as_string())
         server.quit()
@@ -70,11 +72,6 @@ class pymail(object):
 
 if __name__ == '__main__':
     pymail = pymail()
-    s = ""
-    with open('NEW.csv', 'rb') as f:  # 采用b的方式处理可以省去很多问题
-        rows = csv.reader(f)
-        for row in rows:
-            if row:
-                s = s + ",".join(row) + '\n'
+    s = "WTFWTFWTF"
 
-    pymail.send_mail(["NEW.csv",], txt = s )
+    pymail.send_mail(None, txt = s )
