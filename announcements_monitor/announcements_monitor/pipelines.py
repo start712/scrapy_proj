@@ -14,6 +14,7 @@ import os
 import json
 import copy
 import traceback
+
 log_path = r'%s/log/sql_update(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
 
 sys.path.append(sys.prefix + "\\Lib\\MyWheels")
@@ -26,6 +27,21 @@ csv_report = csv_report.csv_report()
 log_obj = set_log.Logger(log_path, set_log.logging.WARNING,
                          set_log.logging.DEBUG)
 log_obj.cleanup(log_path, if_cleanup=False)  # 是否需要在每次运行程序前清空Log文件
+
+import logging
+import logging.handlers
+
+LOG_FILE = r'%s/log/duplicate_entry(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
+
+handler = logging.handlers.RotatingFileHandler(LOG_FILE, maxBytes=1024 * 1024, backupCount=5)  # 实例化handler
+fmt = '%(asctime)s - %(filename)s:%(lineno)s - %(name)s - %(message)s'
+
+formatter = logging.Formatter(fmt)  # 实例化formatter
+handler.setFormatter(formatter)  # 为handler添加formatter
+
+logger0 = logging.getLogger('tst')  # 获取名为tst的logger
+logger0.addHandler(handler)  # 为logger添加handler
+logger0.setLevel(logging.DEBUG)
 
 class AnnouncementsMonitorPipeline(object):
     def __init__(self,dbpool):
@@ -95,7 +111,9 @@ class AnnouncementsMonitorPipeline(object):
             if params:
                 log_obj.debug(u"key saved:%s" % item["monitor_key"])
                 csv_report.output_data([params,], "NEW", title=[u'爬虫编号', u'标题', u'主键', u'发布日期', u'链接', u'其他内容'], method = "a")
-        except:
+        except IntegrityError:
+            logger0.info(params)
+        else:
             log_obj.debug(u"sql insert failed:%s\nINFO:%s" %(item["monitor_key"],traceback.format_exc()))
 
 
