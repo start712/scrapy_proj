@@ -34,7 +34,7 @@ class data_cleaner(object):
     def __init__(self):
         pass
 
-    def get_data(self, length = 1):
+    def get_data(self, length = 100):
         """每次只会读取100条数据，若是长时间没有清洗过数据了，需要更改这个数值"""
         sql = "SELECT `key`, `detail` FROM `monitor` LIMIT %s"
         data = mysql_connecter.connect(sql, [length,], dbname='spider', ip='116.62.230.38', user='spider', password='startspider')
@@ -64,16 +64,23 @@ class data_cleaner(object):
 
         return parcel_no#.encode('utf8')
 
+    def dict2str(self, d):
+        """将字典的内容输出成字符串，便于在MySQL中显示出来"""
+        l = []
+        for k in d:
+            l.append("%s:%s" %(k,d[k]))
+        return ','.join(l)
+
     def main(self):
         # 获取数据
-        data = {self.clean_parcel_no(json.loads(row[1])['parcel_no']): json.loads(row[1]) for row in self.get_data()}
+        data = {row[0]: json.loads(row[1]) for row in self.get_data()}
         with open('list_structure.txt', 'r') as f:
             list_structure = f.read()
             list_structure = list_structure.split(',')
-        sql_col_name = '%s' %(','.join(list_structure))
 
         data0 = {}
-        sql_data_list = []
+        data_list = []
+        row_count = len(data)
         for key in data:
             #补全表结构
             data0 = {}
@@ -83,17 +90,28 @@ class data_cleaner(object):
                 else:
                     data0[s] = ''
 
+                # addition字段特殊处理
+                if s == 'addition':
+                    data0[s] = self.dict2str(data0[s])
 
-            sql_data0 = '(%s)' %(','.join(['\'%s\'' %s for s in list(data0.viewvalues())]))
-            sql_data_list.append(sql_data0)
+                # parcel_no字段括号更新
+                if s == 'parcel_no':
+                    data0[s] = self.clean_parcel_no(data0[s])
+
+            data_list.extend(list(data0.viewvalues()))
             #data[key] = data0
 
-        sql_col_name = ','.join(["`%s`" %s for s in list(data0.viewkeys())])
-        sql_data = ','.join(sql_data_list)
-        sql = "INSERT INTO `土地信息(spider)`(%s) VALUES %s;" %(sql_col_name,sql_data)
-        print sql
+        list_col_name = list(data0.viewkeys())
+        col_len = len(list(data0.viewkeys()))
+        data_blank = '(%s)' %(','.join([r'%s',] * col_len)) #(%s, %s.......)
+        data_blank = ','.join([data_blank,] * row_count) # (%s, %s...),(%s, %s...),(%s, %s...),(%s, %s...)
+
+        sql = "INSERT INTO `土地信息spider`(%s) VALUES%s;" %(','.join(list_col_name), data_blank)#%(sql_col_name,sql_data)
+        #print list_col_name # ','.join([r'%s',] * col_len)
+        #print data_list
+        #print sql
         try:
-            mysql_connecter.connect(sql, [sql_col_name,sql_data], dbname='spider', ip='116.62.230.38', user='spider', password='startspider')
+            mysql_connecter.connect(sql, data_list, dbname='raw_data', ip='192.168.1.124', user='spider', password='startspider')
         except MySQLdb.IntegrityError:
             pass
         else:
@@ -102,4 +120,4 @@ class data_cleaner(object):
 
 if __name__ == '__main__':
     data_cleaner = data_cleaner()
-    print data_cleaner.main()
+    data_cleaner.main()

@@ -90,10 +90,11 @@ class AnnouncementsMonitorPipeline(object):
 
         if type(item['content_detail']) == type({}):
             item["parcel_no"] = item['content_detail']["parcel_no"]#re.sub(r'\s+', '', item['content_detail']["parcel_no"])
+        re_type = re.sub('\\pP|\\pS', '', item["monitor_re"])
         if item["parcel_no"]:
-            item["monitor_key"] = "%s/%s/%s" % (item["monitor_id"], item["monitor_date"], item["parcel_no"])#re.sub(r'\s+', '', "%s/%s/%s" % (item["monitor_id"], item["monitor_date"], item["parcel_no"]))
+            item["monitor_key"] = "%s/%s/%s/%s" % (item["monitor_id"], item["monitor_date"], re_type, item["parcel_no"])#re.sub(r'\s+', '', "%s/%s/%s" % (item["monitor_id"], item["monitor_date"], item["parcel_no"]))
         else:
-            item["monitor_key"] = "raw_page/%s/%s/%s" % (item["monitor_id"], item["monitor_date"], item["monitor_title"])#re.sub(r'\s+', '', "raw_page/%s/%s/%s" % (item["monitor_id"], item["monitor_date"], item["monitor_title"]))
+            item["monitor_key"] = "raw_page/%s/%s/%s/%s" % (item["monitor_id"], item["monitor_date"], re_type, item["monitor_title"])#re.sub(r'\s+', '', "raw_page/%s/%s/%s" % (item["monitor_id"], item["monitor_date"], item["monitor_title"]))
 
         item['content_detail'] = json.dumps(item['content_detail'])#json.dumps({key: re.sub(r'\s+', '', str(item['content_detail'][key])) for key in item['content_detail']})
 
