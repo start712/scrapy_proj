@@ -60,6 +60,7 @@ class controller(object):
             commands.add(command)
             if command == 'timer':
                 self.timer()
+                sys.exit()
 
             if command.find('go')>=0: #判断输入命令是否正确
                 go_command = command
@@ -127,7 +128,7 @@ class controller(object):
                     if row:
                         s = s + ",".join(row[:3]) + '\n'
 
-            self.pymail.send_mail(report_file, "发现新的公告！！", txt=s, to_mail='619978637@qq.com')
+            self.pymail.try_send_mail(report_file, "发现新的公告！！", txt=s, to_mail='619978637@qq.com')
 
             print u"有新的公告！！！已存入NEW.csv!!!!\n" * 3
 
@@ -138,20 +139,21 @@ class controller(object):
         date0 = datetime.datetime.date(datetime.datetime.today() + datetime.timedelta(days=-1))
         log_file = [
             r'%s/log/sql_update(%s).log' % (os.getcwd(), date0),
-            r'%s/log/spider(%s).log' % (os.getcwd(), date0)
+            r'%s/log/spider(%s).log' % (os.getcwd(), date0),
+            r'%s/log/duplicate_entry(%s).log' % (os.getcwd(), date0)
         ]
         if os.path.exists(log_file[0]) and os.path.exists(log_file[1]):
             title = "日常报告%s" % date0
             if os.path.getsize(log_file[1]) == 0:
                 title = "新的BUG报告%s" % date0
 
-            self.pymail.send_mail(log_file, title, txt="", to_mail='3118734521@qq.com')
+            self.pymail.try_send_mail(log_file, title, txt="", to_mail='3118734521@qq.com')
             for f in log_file:  # 发送过的文件，改掉文件名，避免多次发送发给
                 os.rename(f, f + "_")
         elif os.path.exists(log_file[0] + "_") and os.path.exists(log_file[1] + "_"):
             print u'不需要发送log邮件'
         else:
-            self.pymail.send_mail(None, "爬虫报告%s缺少文件" % date0, to_mail='3118734521@qq.com')
+            self.pymail.try_send_mail(None, "爬虫报告%s缺少文件" % date0, to_mail='3118734521@qq.com')
 
 
 if __name__ == '__main__':

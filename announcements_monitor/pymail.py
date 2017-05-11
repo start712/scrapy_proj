@@ -26,6 +26,14 @@ class pymail(object):
     def __init__(self):
         pass
 
+    def try_send_mail(self, file_list, title = "Python邮件", txt = "邮件内容(空)", to_mail = '3118734521@qq.com'):
+        while True:
+            try:
+                self.send_mail(file_list, title, txt, to_mail)
+                break
+            except:
+                pass
+
     def _format_addr(self, s):
         name, addr = parseaddr(s)
         return formataddr((Header(name, 'utf-8').encode(),addr.encode('utf-8') if isinstance(addr, unicode) else addr))
