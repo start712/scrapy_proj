@@ -40,6 +40,9 @@ class data_cleaner(object):
         data = mysql_connecter.connect(sql, [length,], dbname='spider', ip='116.62.230.38', user='spider', password='startspider')
         return data
 
+    def data_calculate(self, d):
+        return d
+
     def clean_parcel_no(self, parcel_no):
         #找出字符串中那些字符需要改
         parcel_no = parcel_no.decode('utf8')
@@ -98,13 +101,17 @@ class data_cleaner(object):
                 if s == 'parcel_no':
                     data0[s] = self.clean_parcel_no(data0[s])
 
+            # 进行相关的数据计算
+            data0 = self.data_calculate(data0)
+
+            # 将数据输入列表，备用
             data_list.extend(list(data0.viewvalues()))
             #data[key] = data0
 
         list_col_name = list(data0.viewkeys())
         col_len = len(list(data0.viewkeys()))
         data_blank = '(%s)' %(','.join([r'%s',] * col_len)) #(%s, %s.......)
-        data_blank = ','.join([data_blank,] * row_count) # (%s, %s...),(%s, %s...),(%s, %s...),(%s, %s...)
+        data_blank = ','.join([data_blank,] * row_count) #(%s, %s...),(%s, %s...),(%s, %s...),(%s, %s...)
 
         sql = "INSERT INTO `土地信息spider`(%s) VALUES%s;" %(','.join(list_col_name), data_blank)#%(sql_col_name,sql_data)
         #print list_col_name # ','.join([r'%s',] * col_len)
@@ -112,6 +119,7 @@ class data_cleaner(object):
         #print sql
         try:
             mysql_connecter.connect(sql, data_list, dbname='raw_data', ip='192.168.1.124', user='spider', password='startspider')
+            print u"上传MySQL成功！"
         except MySQLdb.IntegrityError:
             pass
         else:
