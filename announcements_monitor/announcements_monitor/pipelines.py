@@ -104,7 +104,7 @@ class AnnouncementsMonitorPipeline(object):
 
     #写入数据库中
     def _conditional_insert(self,tx,item):
-        sql = "INSERT INTO monitor(`crawler_id`, `status`, `title`, `key`, `re`, `fixture_date`, `parcel_no`, `content`, `url`, `html`, `detail`) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+        sql = "INSERT INTO monitor(`crawler_id`, `status`, `title`, `key`, `re`, `fixture_date`, `parcel_no`, `content`, `url`, `html`, `detail`) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
         params = (item["monitor_id"], item['parcel_status'], item["monitor_title"], item["monitor_key"], item["monitor_re"], item["monitor_date"], item["parcel_no"],item["monitor_content"], item["monitor_url"], item["content_html"], item['content_detail'])
         try:
             #csv_report.output_data(item, "result", method='a')
