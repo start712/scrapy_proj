@@ -93,6 +93,9 @@ class data_cleaner(object):
                 else:
                     data0[s] = ''
 
+                if s == 'spider_key':
+                    data0[s] = key
+
                 # addition字段特殊处理
                 if s == 'addition':
                     data0[s] = self.dict2str(data0[s])
@@ -100,6 +103,7 @@ class data_cleaner(object):
                 # parcel_no字段括号更新
                 if s == 'parcel_no':
                     data0[s] = self.clean_parcel_no(data0[s])
+
 
             # 进行相关的数据计算
             data0 = self.data_calculate(data0)

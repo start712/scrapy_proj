@@ -62,7 +62,7 @@ class Spider(scrapy.Spider):
                 purpose = site.xpath('td[4]/text()').extract_first() # 土地用途
                 transaction_price_sum = site.xpath('td[5]/text()').extract_first() # 总成交价（万元）
                 competitive_person = site.xpath('td[6]/text()').extract_first() # 竞得人
-                item['monitor_date'] = site.xpath('td[7]/text()').extract_first() # 成交日期
+                item['monitor_date'] = re.sub(r'\s+', '', site.xpath('td[7]/text()').extract_first()) # 成交日期
                 item['monitor_url'] = "http://www.yhland.gov.cn/" + site.xpath('td[1]/a/@href').extract_first() # 链接
 
                 item["monitor_content"] = u"土地坐落:%s,出让面积（平方米）:%s,土地用途:%s,总成交价（万元）:%s,竞得人:%s" %(location,offer_area,purpose,transaction_price_sum,competitive_person)
