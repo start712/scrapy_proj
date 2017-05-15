@@ -85,7 +85,7 @@ class Spider(scrapy.Spider):
         """关键词：^(富阳区).+出让公告"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
-        #item['content_html'] = bs_obj.prettify()
+        item['parcel_status'] = 'onsell'
         sites = bs_obj.find_all('tr')
         # 去掉标题
         sites = [site.find_all('td') for site in sites if sites.index(site) >= 1] #标题高度
@@ -117,7 +117,7 @@ class Spider(scrapy.Spider):
         """关键词：.*富阳区.*出让公告"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
-        #item['content_html'] = bs_obj.prettify()
+        item['parcel_status'] = 'onsell'
         sites = bs_obj.find_all('tr')
         # 去掉标题
         sites = [site.find_all('td') for site in sites if sites.index(site) >= 1] #标题高度
@@ -153,7 +153,7 @@ class Spider(scrapy.Spider):
         """关键词：.*富阳区.*拍卖公告|.*富阳区.*挂牌公告"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
-        #item['content_html'] = bs_obj.prettify()
+        item['parcel_status'] = 'onsell'
         sites = bs_obj.find_all('tr')
         # 去掉标题
         sites = [site.find_all('td') for site in sites if sites.index(site) >= 2] #标题高度
@@ -185,6 +185,7 @@ class Spider(scrapy.Spider):
         """关键词：.*使用权结果公示.*"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
+        item['parcel_status'] = 'sold'
         #item['content_html'] = bs_obj.prettify()
         sites = bs_obj.table.find_all('tr')
         # 去掉标题

@@ -86,6 +86,7 @@ class Spider(scrapy.Spider):
         """关键词：^(?!.*萧山区).*挂牌出让公告"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
+        item['parcel_status'] = 'onsell'
         #item['content_html'] = bs_obj.prettify()
         sites = bs_obj.find("table", class_="MsoNormalTable").find_all('tr')
         # 去掉标题
@@ -114,6 +115,7 @@ class Spider(scrapy.Spider):
         """关键词：.*萧山区.*挂牌出让公告"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
+        item['parcel_status'] = 'onsell'
         #item['content_html'] = bs_obj.prettify()
         sites = bs_obj.find("table", class_="MsoNormalTable").find_all('tr')
         title = [s.get_text(strip=True) for s in sites[0].find_all('td')]
@@ -175,6 +177,7 @@ class Spider(scrapy.Spider):
         """关键词：.*萧政储出.*出让成交公示"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
+        item['parcel_status'] = 'sold'
         #item['content_html'] = bs_obj.prettify()
         sites = bs_obj.find("table", class_="MsoNormalTable").find_all('tr')
         # 去掉标题

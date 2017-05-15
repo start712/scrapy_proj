@@ -75,6 +75,7 @@ class Spider(scrapy.Spider):
         """关键词：杭政工出"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
+        item['parcel_status'] = 'onsell'
         #item['content_html'] = bs_obj.prettify()
         sites = bs_obj.find_all('tr')
         sites = [site.find_all('td') for site in sites if site.b == None and sites.index(site)>=1]  # [@id="list"] [@class="padding10"][position()>1]
@@ -116,6 +117,7 @@ class Spider(scrapy.Spider):
         """关键词：杭政储出"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
+        item['parcel_status'] = 'onsell'
         #item['content_html'] = bs_obj.prettify()
         sites = bs_obj.find_all('tr')
         sites = [site.find_all('td') for site in sites if site.b == None and sites.index(site)>=1]  # [@id="list"] [@class="padding10"][position()>1]

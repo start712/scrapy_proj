@@ -30,4 +30,5 @@ class AnnouncementsMonitorItem(scrapy.Item):
     content_html = scrapy.Field()
     content_detail = scrapy.Field()
     parcel_no = scrapy.Field()
+    parcel_status = scrapy.Field()
 

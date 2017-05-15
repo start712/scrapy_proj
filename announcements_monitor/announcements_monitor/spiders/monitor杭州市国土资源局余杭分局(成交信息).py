@@ -84,6 +84,7 @@ class Spider(scrapy.Spider):
         """关键词：.*余政工出.*"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
+        item['parcel_status'] = 'sold'
         #item['content_html'] = bs_obj.prettify()
         sites = bs_obj.find("table", class_="MsoNormalTable").find_all('tr')
         # 去掉标题
@@ -116,6 +117,7 @@ class Spider(scrapy.Spider):
         """关键词：.*余政储出.*"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
+        item['parcel_status'] = 'sold'
         #item['content_html'] = bs_obj.prettify()
         sites = bs_obj.find("table", class_="MsoNormalTable").find_all('tr')
         # 去掉标题
