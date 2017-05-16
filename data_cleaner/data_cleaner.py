@@ -42,6 +42,24 @@ class data_cleaner(object):
         return data
 
     def data_calculate(self, d):
+        # 出让面积（㎡）
+        if not d['offer_area_mu']:
+            d['offer_area_mu'] = d['offer_area_m2'] * 0.0015
+        # 建筑面积（㎡）
+        if d['building_area'] == '' and d['offer_area_m2'] != '' and d['plot_ratio'] != '':
+            d['building_area'] = float(d['offer_area_m2']) * float(d['plot_ratio'])
+        # 楼面起价（元/㎡）
+        if d['floor_starting_price'] == '' and d['starting_price_sum'] != '' and d['building_area'] != '':
+            d['floor_starting_price'] = float(d['starting_price_sum']) * 10000.0 / float(d['building_area'])
+        # 起始单价
+        if d['starting_price'] == '' and d['starting_price_sum'] != '' and d['offer_area_m2'] != '':
+            d['starting_price'] = float(d['starting_price_sum']) / (float(d['offer_area_m2']) * 0.0015)
+        # 成交楼面价（元/㎡）
+        if d['floor_transaction_price'] == '' and d['transaction_price_sum'] != '' and d['building_area'] != '':
+            d['floor_transaction_price'] = float(d['transaction_price_sum']) * 10000 / float(d['building_area'])
+        # 成交单价
+        if d['transaction_price'] == '' and d['transaction_price_sum'] != '' and d['offer_area_m2'] != '':
+            d['transaction_price'] = float(d['transaction_price_sum']) / float(d['offer_area_m2']) * 666.67
         return d
 
     def clean_parcel_no(self, parcel_no):
@@ -75,27 +93,85 @@ class data_cleaner(object):
             l.append("%s:%s" %(k,d[k]))
         return ','.join(l)
 
-    def set_method(self, new_data, keys):
+    def set_method(self, new_data):
+        """
+        :param new_data: 字典
+        :return: 
+        """
         if 'parcel_no' not in new_data:
             return None, 0
+        keys = list(new_data.viewkeys())
         key_str = ','.join(keys)
         check_sql = "SELECT %s FROM `raw_data`.`土地信息spider` WHERE `parcel_no` = %s" %(key_str, r'%s')
-        res = mysql_connecter.connect(check_sql, [new_data['parcel_no'],])[0]
+        res = mysql_connecter.connect(check_sql, [new_data['parcel_no'],])
         if res:
-            #update_dict = {}
-            # 需要更新数据
-            for key in keys:
-                if res[key] != '' and new_data[key] == '':
-                    new_data[key] = res[key]
-                    #update_dict[]
-                if res[key] != new_data[key]:
-                    new_data[key] = res[key]
-                    with open('\cleaner_log\changed_data.txt', 'a') as f:
-                        f.write('时间：%s\n地块%s中的"%s"新旧数据有出入，已替换成新数据\n' %(datetime.datetime.now(), new_data['parcel_no'], key))
-            return new_data, 'update'
+            #已经有旧数据了
+            res = res[0]
+
+            # 需要更新数据，只要是成交的数据都试图更新一遍
+            if new_data['status'] == 'sold':
+                old_data = {keys[i]: res[i] for i in xrange(len(keys))}  # 这块地的旧数据
+                parcel_no = new_data['parcel_no']
+                for key in keys:
+                    # 旧数据里有而新数据里没有的，写入新数据里
+                    if old_data[key] != '' and new_data[key] == '':
+                        new_data[key] = old_data[key]
+
+                    if old_data[key] != new_data[key]:
+                        new_data[key] = old_data[key]
+                        with open(os.getcwd() + '\cleaner_log\changed_data.txt', 'a') as f:
+                            f.write('时间：%s\n地块%s中的"%s"新旧数据有出入，已替换成新数据\n' %(datetime.datetime.now(), new_data['parcel_no'], key))
+                return new_data, 'update'
+            else:
+                with open(os.getcwd() + '\cleaner_log\duplicate_onsell.txt', 'a') as f:
+                    f.write('时间：%s\n地块%s已经存在旧在售数据，没有写入新的在售数据' % (datetime.datetime.now(), new_data['parcel_no']))
+                return None, 0
         else:
-            # 需要插入数据
+            # 没有旧数据，需要插入数据
             return new_data, 'insert'
+
+    def output_update_sql(self, l):
+        """
+        生成器
+        :param l: [{},{},{}] 输入包含字典的列表 
+        :return: 每个字典中不同key组成的sql语句
+        """
+        print 'output_update_sql1:', l
+        l = [{k:d[k] for k in d if d[k]} for d in l]
+        print 'output_update_sql2:', l
+
+        d0 = {}
+        res = []
+        # 生成第一级为各个需要更新的字段名的json字典，第二级为对应字段下parcel_no对应的数据
+        for d in l:
+            for k in d:
+                if k not in d0:
+                    d0[k] = {}
+                d0[k][d['parcel_no']] = d[k]
+
+        # 对每个字段生成一个sql update代码
+        for key in d0:
+            sql0 = ""
+            sql1 = []
+            data0 = []
+            blank0 = []
+            for k0 in d0[key]:
+                sql0 = sql0 + "WHEN %s THEN %s\n"
+                sql1.append(r'%s')
+                data0.append(k0)
+                data0.append(d0[key][k0])
+                blank0.append(k0)
+
+            sql = """
+                  UPDATE raw_data.`土地信息spider`
+                  SET 
+                  %s = CASE parcel_no
+                  %s
+                  END 
+                  WHERE parcel_no in (%s)
+                  """ %(key, sql0, ','.join(sql1))
+            data0.extend(blank0)
+            yield  [sql, data0, key]
 
     def main(self):
         # 获取数据
@@ -109,12 +185,12 @@ class data_cleaner(object):
         insert_list = []
         update_row_count = 0
         insert_row_count = 0
-        method = 0
+        #method = 0
         for key in data:
             #补全表结构
-            data0 = {}
+            data0 = {} # data0是一行数据中，以字段名为key的字典
             for s in list_structure:
-
+                print data[key]
                 if s in data[key]:
                     data0[s] = data[key][s]
                 else:
@@ -134,14 +210,14 @@ class data_cleaner(object):
                 if s == 'addition':
                     data0[s] = self.dict2str(data0[s])
 
-                data0, method = self.set_method(data0, list_structure)
+            data0, method = self.set_method(data0)
 
             # 进行相关的数据计算
             data0 = self.data_calculate(data0)
 
             # 将数据输入列表，备用
             if method == 'update':
-                update_list.append(list(data0.viewvalues()))  #每条数据存在不同子列表中
+                update_list.append(data0)  # 每条数据字典存在列表中
                 update_row_count += 1
             elif method == 'insert':
                 insert_list.extend(list(data0.viewvalues()))
@@ -149,35 +225,41 @@ class data_cleaner(object):
             else:
                 log_obj.debug(u"sql code => None")
 
-        list_col_name = list(data0.viewkeys())
+        list_col_name = list({s: "" for s in list_structure}.viewkeys()) #获取字段在字典中作为key的顺序
         col_len = len(list_col_name)
         row_blank = '(%s)' %(','.join([r'%s',] * col_len)) #(%s, %s.......) # 一行数据的%s符号
         #data_blank = ','.join([data_blank,] * row_count) #(%s, %s...),(%s, %s...),(%s, %s...),(%s, %s...)
 
         # 批量更新数据
-        """
-        UPDATE raw_data.`土地信息spider`
-SET 
-parcel_name = CASE parcel_no
-WHEN '萧政储出[2017]4号' THEN 'value' 
-WHEN '富政储出[2016]10号' THEN 'value' 
-END 
-WHERE parcel_no in ('萧政储出[2017]4号', '富政储出[2016]10号')
+        # 调整需要更新的数据的结构
+        if update_list:
+            update_sql_data_list = self.output_update_sql(update_list)
+            for l in update_sql_data_list:
+                sql, data, col = l
+                print sql
+                print data
+                try:
+                    mysql_connecter.connect(sql, data, dbname='raw_data', ip='192.168.1.124', user='spider',
+                                            password='startspider')
+                    print u"更新MySQL（%s字段）成功！" %col
+                except:
+                    log_obj.debug(u"sql update failed:\n%s" % traceback.format_exc())
 
         # 批量插入数据
-        data_blank = ','.join([row_blank, ] * insert_row_count)  # (%s, %s...),(%s, %s...),(%s, %s...),(%s, %s...)
-        sql = "INSERT INTO `土地信息spider`(%s) VALUES%s;" %(','.join(list_col_name), data_blank)#%(sql_col_name,sql_data)
+        if insert_list:
+            data_blank = ','.join([row_blank, ] * insert_row_count)  # (%s, %s...),(%s, %s...),(%s, %s...),(%s, %s...)
+            sql = "INSERT INTO `土地信息spider`(%s) VALUES%s;" %(','.join(list_col_name), data_blank)#%(sql_col_name,sql_data)
+            #print 'list_col_name', list_col_name
+            #print insert_list
+            try:
+                mysql_connecter.connect(sql, insert_list, dbname='raw_data', ip='192.168.1.124', user='spider', password='startspider')
+                print u"上传MySQL成功！"
+            except MySQLdb.IntegrityError:
+                pass
+            else:
+                log_obj.debug(u"sql insert failed:\n%s" %traceback.format_exc())
 
 
-        try:
-            mysql_connecter.connect(sql, data_list, dbname='raw_data', ip='192.168.1.124', user='spider', password='startspider')
-            print u"上传MySQL成功！"
-        except MySQLdb.IntegrityError:
-            pass
-        else:
-            log_obj.debug(u"sql insert failed:\n%s" %traceback.format_exc())
-
-"""
 if __name__ == '__main__':
     data_cleaner = data_cleaner()
     data_cleaner.main()
