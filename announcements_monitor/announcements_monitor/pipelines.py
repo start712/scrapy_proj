@@ -96,8 +96,7 @@ class AnnouncementsMonitorPipeline(object):
         else:
             item["monitor_key"] = "raw_page/%s/%s/%s/%s" % (item["monitor_id"], item["monitor_date"], re_type, item["monitor_title"])#re.sub(r'\s+', '', "raw_page/%s/%s/%s" % (item["monitor_id"], item["monitor_date"], item["monitor_title"]))
 
-        if 'status' in item['content_detail']:
-            item['content_detail']['status'] = ['parcel_status']
+        item['content_detail']['status'] = ['parcel_status']
         item['content_detail'] = json.dumps(item['content_detail'])#json.dumps({key: re.sub(r'\s+', '', str(item['content_detail'][key])) for key in item['content_detail']})
 
         query=self.dbpool.runInteraction(self._conditional_insert,item)#调用插入的方法
