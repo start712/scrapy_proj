@@ -42,23 +42,26 @@ class data_cleaner(object):
         return data
 
     def data_calculate(self, d):
+        if not d:
+            return None
         # 出让面积（㎡）
         if not d['offer_area_mu']:
-            d['offer_area_mu'] = d['offer_area_m2'] * 0.0015
+            d['offer_area_mu'] = float(d['offer_area_m2']) * 0.0015
         # 建筑面积（㎡）
-        if d['building_area'] == '' and d['offer_area_m2'] != '' and d['plot_ratio'] != '':
+        if d['building_area'] and d['offer_area_m2'] and d['plot_ratio'] :
             d['building_area'] = float(d['offer_area_m2']) * float(d['plot_ratio'])
         # 楼面起价（元/㎡）
-        if d['floor_starting_price'] == '' and d['starting_price_sum'] != '' and d['building_area'] != '':
+        if d['floor_starting_price'] and d['starting_price_sum'] and d['building_area'] :
+            print "d['building_area']", d['building_area']
             d['floor_starting_price'] = float(d['starting_price_sum']) * 10000.0 / float(d['building_area'])
         # 起始单价
-        if d['starting_price'] == '' and d['starting_price_sum'] != '' and d['offer_area_m2'] != '':
+        if d['starting_price'] and d['starting_price_sum'] and d['offer_area_m2'] :
             d['starting_price'] = float(d['starting_price_sum']) / (float(d['offer_area_m2']) * 0.0015)
         # 成交楼面价（元/㎡）
-        if d['floor_transaction_price'] == '' and d['transaction_price_sum'] != '' and d['building_area'] != '':
+        if d['floor_transaction_price'] and d['transaction_price_sum'] and d['building_area'] :
             d['floor_transaction_price'] = float(d['transaction_price_sum']) * 10000 / float(d['building_area'])
         # 成交单价
-        if d['transaction_price'] == '' and d['transaction_price_sum'] != '' and d['offer_area_m2'] != '':
+        if d['transaction_price'] and d['transaction_price_sum'] and d['offer_area_m2'] :
             d['transaction_price'] = float(d['transaction_price_sum']) / float(d['offer_area_m2']) * 666.67
         return d
 
@@ -136,9 +139,9 @@ class data_cleaner(object):
         :param l: [{},{},{}] 输入包含字典的列表 
         :return: 每个字典中不同key组成的sql语句
         """
-        print 'output_update_sql1:', l
+        #print 'output_update_sql1:', l
         l = [{k:d[k] for k in d if d[k]} for d in l]
-        print 'output_update_sql2:', l
+        #print 'output_update_sql2:', l
 
         d0 = {}
         res = []
@@ -173,6 +176,21 @@ class data_cleaner(object):
             data0.extend(blank0)
             yield  [sql, data0, key]
 
+    def clean_num(self, s):
+        #print 's:', s
+        #print "type(s):", type(s)
+        r = re.compile(r'[\!\/_,$%^*(+\"\']+|[+——！，。？、~@#￥%……&*（）]+'.decode('utf8'))
+        m = r.search(s.decode('utf8'))
+        if m:
+            l = r.split(s)
+            for s0 in l:
+                m = re.search('地上'.decode('utf8'), s0.decode('utf8'))
+                if m:
+                    return re.search('\d+', s).group(), s
+            return s, None
+        else:
+            return s, None
+
     def main(self):
         # 获取数据
         data = {row[0]: json.loads(row[1]) for row in self.get_data()}
@@ -180,7 +198,6 @@ class data_cleaner(object):
             list_structure = f.read()
             list_structure = list_structure.split(',')
 
-        data0 = {}
         update_list = []
         insert_list = []
         update_row_count = 0
@@ -189,27 +206,32 @@ class data_cleaner(object):
         for key in data:
             #补全表结构
             data0 = {} # data0是一行数据中，以字段名为key的字典
+            # 先补满字段
             for s in list_structure:
-                print data[key]
+                #print data[key]
                 if s in data[key]:
                     data0[s] = data[key][s]
                 else:
                     data0[s] = ''
 
-                if s == 'spider_key':
-                    data0[s] = key
+            data0['spider_key'] = key
 
-                # 有待商榷：是每次都调用数据库来判断地块已经存在了，还是一起次先取出所有地块的编号，在Python中查找
-                # parcel_no字段括号更新
-                if s == 'parcel_no':
-                    data0[s] = self.clean_parcel_no(data0[s])
-                    #check_sql = "SELECT `parcel_no` FROM `raw_data`.`土地信息spider` WHERE `parcel_no` = %s"
-                    #res = mysql_connecter.connect(check_sql, [data0[s],])
+            # 有待商榷：是每次都调用数据库来判断地块已经存在了，还是一起次先取出所有地块的编号，在Python中查找
+            # parcel_no字段括号更新
+            data0['parcel_no'] = self.clean_parcel_no(data0['parcel_no'])
 
-                # addition字段特殊处理
-                if s == 'addition':
-                    data0[s] = self.dict2str(data0[s])
+            # 建筑面积往往是数字与文字的混合，需要去除数字
+            data0['building_area'], a0 = self.clean_num(data0['building_area'])
+            if a0: # 若提取过数字，把原文放在备注栏中
+                if 'addition' not in data0 or type(data0['addition']) != type({}):
+                    data0['addition'] = {}
+                data0['addition']['建筑面积'] = a0
+                #print data0['addition']
 
+            # addition字段特殊处理
+            data0['addition'] = self.dict2str(data0['addition'])
+
+            # 判定数据在数据库中的处理方法
             data0, method = self.set_method(data0)
 
             # 进行相关的数据计算
@@ -263,3 +285,5 @@ class data_cleaner(object):
 if __name__ == '__main__':
     data_cleaner = data_cleaner()
     data_cleaner.main()
+
+
