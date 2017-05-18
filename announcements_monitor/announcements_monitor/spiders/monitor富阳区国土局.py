@@ -137,8 +137,7 @@ class Spider(scrapy.Spider):
                      'offer_area_m2': site[2].get_text(strip=True),
                      'purpose': site[3].get_text(strip=True),
                      'plot_ratio': site[4].get_text(strip=True),
-                     'starting_price_sum': site[7].get_text(strip=True),
-                     'addition': {'保证金': site[8].get_text(strip=True)}
+                     'starting_price_sum': site[8].get_text(strip=True)
                      }
                 if '≤' in content_detail['plot_ratio']:
                     content_detail['plot_ratio'] = content_detail['plot_ratio'].split('≤')[-1]

@@ -176,9 +176,7 @@ class data_cleaner(object):
             data0.extend(blank0)
             yield  [sql, data0, key]
 
-    def clean_num(self, s):
-        #print 's:', s
-        #print "type(s):", type(s)
+    def clean_building_area(self, s):
         r = re.compile(r'[\!\/_,$%^*(+\"\']+|[+——！，。？、~@#￥%……&*（）]+'.decode('utf8'))
         m = r.search(s.decode('utf8'))
         if m:
@@ -190,6 +188,9 @@ class data_cleaner(object):
             return s, None
         else:
             return s, None
+
+    def clean_num(self, s):
+        return re.sub(r'[^\d\.]', '', s)
 
     def main(self):
         # 获取数据
@@ -221,12 +222,11 @@ class data_cleaner(object):
             data0['parcel_no'] = self.clean_parcel_no(data0['parcel_no'])
 
             # 建筑面积往往是数字与文字的混合，需要去除数字
-            data0['building_area'], a0 = self.clean_num(data0['building_area'])
+            data0['building_area'], a0 = self.clean_building_area(data0['building_area'])
             if a0: # 若提取过数字，把原文放在备注栏中
                 if 'addition' not in data0 or type(data0['addition']) != type({}):
                     data0['addition'] = {}
                 data0['addition']['建筑面积'] = a0
-                #print data0['addition']
 
             # addition字段特殊处理
             data0['addition'] = self.dict2str(data0['addition'])
