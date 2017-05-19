@@ -243,7 +243,10 @@ class data_cleaner(object):
             data0, method = self.set_method(data0)
 
             # 进行相关的数据计算
-            #data0 = self.data_calculate(data0)
+            try:
+                data0 = self.data_calculate(data0)
+            except:
+                log_obj.error("地块%s的数据结构有错误：\n%s" %(data0['parcel_no'], traceback.format_exc()))
 
             # 将数据输入列表，备用
             if method == 'update':
@@ -266,8 +269,8 @@ class data_cleaner(object):
             update_sql_data_list = self.output_update_sql(update_list)
             for l in update_sql_data_list:
                 sql, data, col = l
-                print sql
-                print data
+                #print sql
+                #print data
                 try:
                     mysql_connecter.connect(sql, data, dbname='raw_data', ip='192.168.1.124', user='spider',
                                             password='startspider')
