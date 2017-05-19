@@ -73,7 +73,7 @@ class Spider(scrapy.Spider):
                 yield item
 
     def parse1(self, response):
-        """关键词：杭政工出"""
+        """关键词：(杭政工出.*)|(杭政储出.*)"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
         item['parcel_status'] = 'sold'
@@ -101,6 +101,13 @@ class Spider(scrapy.Spider):
                      'floor_transaction_price': str(site[11].get_text(strip=True)).split('～')[-1],
                      'addition': {'报名及竞价情况': site[-1].get_text(strip=True)}
                      }
+
+                # 若没有数据，去除 / 符号
+                content_detail['plot_ratio'] = re.sub(r'/', '', content_detail['plot_ratio'])
+                content_detail['transaction_price'] = re.sub(r'/', '', content_detail['transaction_price'])
+
+                # 去除一些没用的括号
+                content_detail['floor_transaction_price'] = re.sub(r'[\(（].+[）\)]|\s+', '', content_detail['floor_transaction_price'])
 
                 # 建筑面积有时会杂有文字
                 if '地上' in content_detail['building_area']:

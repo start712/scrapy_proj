@@ -37,32 +37,40 @@ class data_cleaner(object):
 
     def get_data(self, length = 100):
         """每次只会读取100条数据，若是长时间没有清洗过数据了，需要更改这个数值"""
-        sql = "SELECT `key`, `detail` FROM `monitor` LIMIT %s"
-        data = mysql_connecter.connect(sql, [length,], dbname='spider', ip='116.62.230.38', user='spider', password='startspider')
+        sql = "SELECT `key`, `detail` FROM `monitor` " # LIMIT %s [length,],
+        data = mysql_connecter.connect(sql,  dbname='spider', ip='116.62.230.38', user='spider', password='startspider')
         return data
 
     def data_calculate(self, d):
         if not d:
             return None
         # 出让面积（㎡）
-        if not d['offer_area_mu']:
+        if not d['offer_area_mu'] and d['offer_area_m2']:
             d['offer_area_mu'] = float(d['offer_area_m2']) * 0.0015
+
         # 建筑面积（㎡）
-        if d['building_area'] and d['offer_area_m2'] and d['plot_ratio'] :
+        if not d['building_area'] and d['offer_area_m2'] and d['plot_ratio'] :
             d['building_area'] = float(d['offer_area_m2']) * float(d['plot_ratio'])
+
         # 楼面起价（元/㎡）
-        if d['floor_starting_price'] and d['starting_price_sum'] and d['building_area'] :
-            print "d['building_area']", d['building_area']
+        if not d['floor_starting_price'] and d['starting_price_sum'] and d['building_area'] :
             d['floor_starting_price'] = float(d['starting_price_sum']) * 10000.0 / float(d['building_area'])
+
         # 起始单价
-        if d['starting_price'] and d['starting_price_sum'] and d['offer_area_m2'] :
+        if not d['starting_price'] and d['starting_price_sum'] and d['offer_area_m2'] :
             d['starting_price'] = float(d['starting_price_sum']) / (float(d['offer_area_m2']) * 0.0015)
+
         # 成交楼面价（元/㎡）
-        if d['floor_transaction_price'] and d['transaction_price_sum'] and d['building_area'] :
+        if not d['floor_transaction_price'] and d['transaction_price_sum'] and d['building_area'] :
             d['floor_transaction_price'] = float(d['transaction_price_sum']) * 10000 / float(d['building_area'])
+
         # 成交单价
-        if d['transaction_price'] and d['transaction_price_sum'] and d['offer_area_m2'] :
+        if not d['transaction_price'] and d['transaction_price_sum'] and d['offer_area_m2'] :
             d['transaction_price'] = float(d['transaction_price_sum']) / float(d['offer_area_m2']) * 666.67
+
+        # 溢价率
+        if not d['premium_rate'] and d['transaction_price_sum'] and d['starting_price_sum']:
+            d['premium_rate'] = (float(d['transaction_price_sum'])-float(d['starting_price_sum'])) / float(d['starting_price_sum'])
         return d
 
     def clean_parcel_no(self, parcel_no):
@@ -235,7 +243,7 @@ class data_cleaner(object):
             data0, method = self.set_method(data0)
 
             # 进行相关的数据计算
-            data0 = self.data_calculate(data0)
+            #data0 = self.data_calculate(data0)
 
             # 将数据输入列表，备用
             if method == 'update':

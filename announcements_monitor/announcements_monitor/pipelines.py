@@ -87,6 +87,7 @@ class AnnouncementsMonitorPipeline(object):
                 s_list.append(s)
         #if s_list:
         #    log_obj.debug(u'%s中为空字符串的字段为%s' %(item['monitor_title'], s_list))
+        item["monitor_date"] = re.sub(r'[\(（\)）\[\]]', '', item["monitor_date"])
 
         if type(item['content_detail']) == type({}):
             item["parcel_no"] = item['content_detail']["parcel_no"]#re.sub(r'\s+', '', item['content_detail']["parcel_no"])

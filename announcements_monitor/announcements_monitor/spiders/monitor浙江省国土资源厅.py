@@ -93,7 +93,7 @@ class Spider(scrapy.Spider):
                 parcel_data.append(data_dict)
 
             item['content_detail'] = {'parcel_no': str(item['monitor_title']),
-                                      'addition': {'所有数据':parcel_data}}
+                                      'addition': {'data_list':parcel_data}}
 
             yield item
         except:
@@ -133,7 +133,7 @@ class Spider(scrapy.Spider):
 
                 parcel_data.append(data_dict)
             item['parcel_no'] = item['monitor_title']
-            item['content_detail'] = {'addition':{'所有数据':parcel_data}}
+            item['content_detail'] = {'addition':{'data_list':parcel_data}}
         except:
             log_obj.error("%s（%s）中无法解析%s\n%s" % (self.name, response.url, item['monitor_title'], traceback.format_exc()))
             yield response.meta['item']
