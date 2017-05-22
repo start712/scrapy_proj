@@ -48,8 +48,8 @@ class Spider(scrapy.Spider):
     allowed_domains = ["www.zjdlr.gov.cn"]
 
     def start_requests(self):
-        urls1 =  ["http://www.zjdlr.gov.cn/col/col1071192/index.html?uid=4228212&pageNum=%s" %i for i in xrange(6) if i > 0]
-        urls2 =  []#["http://www.zjdlr.gov.cn/col/col1071194/index.html?uid=4228212&pageNum=%s" %i for i in xrange(6) if i > 0]
+        urls1 =  []#["http://www.zjdlr.gov.cn/col/col1071192/index.html?uid=4228212&pageNum=%s" %i for i in xrange(6) if i > 0]
+        urls2 =  ["http://www.zjdlr.gov.cn/col/col1071194/index.html?uid=4228212&pageNum=%s" %i for i in xrange(6) if i > 0]
         for url in urls1 + urls2:
             yield scrapy.Request(url=url, callback=self.parse)
 
@@ -80,7 +80,7 @@ class Spider(scrapy.Spider):
                     yield scrapy.Request(url=item['monitor_url'], meta={'item': item}, callback=self.parse1, dont_filter=False)
                 elif re.search(r'.*公示.*', item['monitor_title'].encode('utf8')):
                     item['monitor_re'] = r'.*公示.*'
-                    yield scrapy.Request(item['monitor_url'], meta={'item': item}, callback=self.parse2, dont_filter=False)
+                    yield scrapy.Request(url=item['monitor_url'], meta={'item': item}, callback=self.parse2, dont_filter=False)
                 else:
                     yield item
 
@@ -89,15 +89,19 @@ class Spider(scrapy.Spider):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
         parcel_data = []
+        item['parcel_status'] = 'onsell'
         #item['content_html'] = bs_obj.prettify()
         sites = bs_obj.find_all('table', style='border-collapse:collapse; border-color:#333333;font-size:12px;')
-        if not sites:
-            log_obj.debug(u"%s(%s)没有检测到更多detail" %(self.name, response.url))
-            yield response.meta['item']
             
         try:
             for site in sites:
+                item['parcel_no'] = re.search(r'(?<=\().*(?=\))', item['monitor_title']).group()
                 content_detail = {'addition':{}}
+                
+                if not site:
+                    log_obj.debug(u"%s(%s)没有检测到更多detail" %(self.name, response.url))
+                    yield response.meta['item']
+                    
                 data_frame = pd.read_html(str(site), encoding='gbk')[0] #1
                 col_count = len(data_frame.columns)
                 if col_count % 2 == 0:
@@ -124,8 +128,9 @@ class Spider(scrapy.Spider):
         """关键词：.*公示.*"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
-        item['parcel_no'] = re.search(r'(?<=\().*(?=\))', item['monitor_title']).group()
+        item['parcel_status'] = 'sold'
 
+            
         site = bs_obj.find('table', style='border-collapse:collapse; border-color:#333333; font-size:12px;')
         if not site:
             log_obj.debug(u"%s(%s)没有检测到更多detail" % (self.name, response.url))
@@ -133,11 +138,15 @@ class Spider(scrapy.Spider):
 
         parcel_data = []
         try:
-            data_frame = pd.read_html(str(site), encoding='gbk')[0] #2
+            data_frame = pd.read_html(str(site), encoding='utf8')[0] #2
             a = numpy.array(data_frame)
-            title = a[0]
-            data_list = a[1:]
+            print 'data_frame', a 
             for i in xrange(1,len(a)):
+                # 从标题中取出地块编号
+                m = re.search(r'(?<=\().*(?=\))', item['monitor_title'])
+                if m:
+                    item['parcel_no'] = m.group()
+                    
                 content_detail = {'addition': {}}
                 # 将第一行标题跟每一列的数据组成一个字典
                 d0 = dict(a[[0, i], :].T)
@@ -152,13 +161,16 @@ class Spider(scrapy.Spider):
                 if len(a) == 2:
                     content_detail['parcel_no'] = item['parcel_no']
                 else:
+                    if 'parcel_no' not in content_detail:
+                        content_detail['parcel_no'] = '表格中无地块编号'
+                        
                     item['parcel_no'] = '%s(%s)' %(item['parcel_no'], content_detail['parcel_no'])
                     content_detail['parcel_no'] = item['parcel_no']
 
                 item['content_detail'] = content_detail
                 yield item
         except:
-            log_obj.error("%s（%s）中无法解析%s\n%s" % (self.name, response.url, item['monitor_title'], traceback.format_exc().decode('gbk')))
+            log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, item['monitor_title'], traceback.format_exc().decode('gbk').encode('utf8')))
             yield response.meta['item']
 
 if __name__ == '__main__':
