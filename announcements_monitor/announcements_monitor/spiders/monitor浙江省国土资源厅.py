@@ -11,11 +11,13 @@ import sys
 import os
 import traceback
 import bs4
+import numpy
 import requests
 import scrapy
 import announcements_monitor.items
 import re
 import datetime
+import pandas as pd
 log_path = r'%s/log/spider_DEBUG(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
 
 sys.path.append(sys.prefix + "\\Lib\\MyWheels")
@@ -29,7 +31,14 @@ log_obj = set_log.Logger(log_path, set_log.logging.WARNING,
 log_obj.cleanup(log_path, if_cleanup=False)  # 是否需要在每次运行程序前清空Log文件
 csv_report = csv_report.csv_report()
 
-
+key_dict = {
+    '宗地坐落':'parcel_location',
+    '宗地编号':'parcel_no',
+    '宗地面积':'offer_area_m2',
+    '容积率':'plot_ratio',
+    '土地用途':'purpose',
+    '起始价':'starting_price_sum'
+}
 
 class Spider(scrapy.Spider):
     name = "511701"
@@ -83,19 +92,26 @@ class Spider(scrapy.Spider):
             log_obj.debug(u"%s(%s)没有检测到更多detail" %(self.name, response.url))
 
         try:
-            for i in xrange(len(sites)):
-                site = sites[i]  # 一个对应网页中一个地块信息的表格
-                table0 = [tr0.find_all('td') for tr0 in site.find_all('tr')] #把每个tr中的所有td放入一个列表内
-                table0 = [s.get_text(strip=True) for l in table0 for s in l if len(l)%2==0] #先将所有一行中偶数个单元格的数据放在一个列表
-                data_dict = {table0[i]:table0[i+1] for i in xrange(len(table0)) if i%2==0} # 将所有数据的标题与之对应写成字典
-                #for key in data_dict:
-                #    print key, ':', data_dict[key]
-                parcel_data.append(data_dict)
+            for table in sites:
+                content_detail = {'addition':{}}
+                data_frame = pd.read_html(table, encoding='utf8')[0]
+                col_count = len(data_frame.columns)
+                if col_count % 2 == 0:
+                    # 一列标题，下一列为数据
+                    # 先将数据线data frame数据转化为numpy数组，然后将数组reshape改成2列
+                    arr = numpy.reshape(numpy.array(data_frame), (-1, 2))
+                    # 去除key中的空格和冒号
+                    data_dict = dict(arr)
+                    data_dict = {re.sub(r'\s+|:|：', '', key): data_dict[key] for key in data_dict if key != 'nan'}
+                    for key in data_dict:
+                        if key in key_dict:
+                            # key_dict[key]将中文键名改成英文的
+                            content_detail[key_dict[key]] = data_dict[key]
+                        else:
+                            content_detail['addition'][key] = data_dict[key]
 
-            item['content_detail'] = {'parcel_no': str(item['monitor_title']),
-                                      'addition': {'data_list':parcel_data}}
-
-            yield item
+                item['content_detail'] = content_detail
+                yield item
         except:
             log_obj.error("%s（%s）中无法解析%s\n%s" % (self.name, response.url, item['monitor_title'], traceback.format_exc()))
             yield response.meta['item']
@@ -104,36 +120,38 @@ class Spider(scrapy.Spider):
         """关键词：.*公示.*"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
-        parcel_data = []
-        #item['content_html'] = bs_obj.prettify()
-        try:
-            sites = bs_obj.find('table', style='border-collapse:collapse; border-color:#333333; font-size:12px;').find_all('tr')
-            sites = [site.find_all('td') for site in sites]  # [@id="list"] [@class="padding10"][position()>1]
-            title = sites.pop(0)
+        item['parcel_no'] = re.search(r'(?<=\().*(?=\))', item['monitor_title']).group()
 
-            if not sites:
-                log_obj.debug(u"%s(%s)没有检测到更多detail" % (self.name, response.url))
-        except:
-            log_obj.debug(u"问题网页：%s(%s)" % (self.name, response.url))
+        site = bs_obj.find('table', style='border-collapse:collapse; border-color:#333333; font-size:12px;')
+        if not site:
+            log_obj.debug(u"%s(%s)没有检测到更多detail" % (self.name, response.url))
 
         parcel_data = []
         try:
-            for i in xrange(len(sites)):
-                site = sites[i]
-                data_dict = {}
-                #print "!!!!!!!!", len(title), '  ', len(site)
-                for j in xrange(len(site)):
-                    if len(title) == len(site):
-                        data_dict[title[j].get_text()] = site[j].get_text()
+            data_frame = pd.read_html(site, encoding='utf8')
+            a = numpy.array(data_frame)
+            title = a[0]
+            data_list = a[1:]
+            for i in xrange(1,len(a)):
+                content_detail = {'addition': {}}
+                # 将第一行标题跟每一列的数据组成一个字典
+                d0 = dict(a[[0, i], :].T)
+                for key in d0:
+                    if key in key_dict:
+                        # key_dict[key]将中文键名改成英文的
+                        content_detail[key_dict[key]] = d0[key]
                     else:
-                        # 偶尔会有不规整的表格
-                        if '额外数据' not in data_dict:
-                            data_dict['额外数据'] = []
-                        data_dict['额外数据'].append(site[j].get_text())
+                        content_detail['addition'][key] = d0[key]
+                # 若有多行数据，则表示一个地块编号下有多块地，需要在取不同的名字
+                # 另外，网页中表格内的地块编号不对，需要更改
+                if len(a) == 2:
+                    content_detail['parcel_no'] = item['parcel_no']
+                else:
+                    item['parcel_no'] = '%s(%s)' %(item['parcel_no'], content_detail['parcel_no'])
+                    content_detail['parcel_no'] = item['parcel_no']
 
-                parcel_data.append(data_dict)
-            item['parcel_no'] = item['monitor_title']
-            item['content_detail'] = {'addition':{'data_list':parcel_data}}
+                item['content_detail'] = content_detail
+                yield item
         except:
             log_obj.error("%s（%s）中无法解析%s\n%s" % (self.name, response.url, item['monitor_title'], traceback.format_exc()))
             yield response.meta['item']
