@@ -89,7 +89,7 @@ class AnnouncementsMonitorPipeline(object):
         #    log_obj.debug(u'%s中为空字符串的字段为%s' %(item['monitor_title'], s_list))
         item["monitor_date"] = re.sub(r'[\(（\)）\[\]]', '', item["monitor_date"])
 
-        if type(item['content_detail']) == type({}):
+        if type(item['content_detail']) == type({}) and not item["parcel_no"] and "parcel_no" in item['content_detail']:
             item["parcel_no"] = item['content_detail']["parcel_no"]#re.sub(r'\s+', '', item['content_detail']["parcel_no"])
         re_type = re.sub('\\pP|\\pS', '', item["monitor_re"])
         if item["parcel_no"]:

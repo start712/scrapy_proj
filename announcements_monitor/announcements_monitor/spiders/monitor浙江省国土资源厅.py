@@ -37,7 +37,10 @@ key_dict = {
     '宗地面积':'offer_area_m2',
     '容积率':'plot_ratio',
     '土地用途':'purpose',
-    '起始价':'starting_price_sum'
+    '起始价':'starting_price_sum',
+    '地块编号':'parcel_no',
+    '地块位置':'parcel_location',
+    '成交价(万元)':'transaction_price_sum'
 }
 
 class Spider(scrapy.Spider):
@@ -46,7 +49,7 @@ class Spider(scrapy.Spider):
 
     def start_requests(self):
         urls1 =  ["http://www.zjdlr.gov.cn/col/col1071192/index.html?uid=4228212&pageNum=%s" %i for i in xrange(6) if i > 0]
-        urls2 =  ["http://www.zjdlr.gov.cn/col/col1071194/index.html?uid=4228212&pageNum=%s" %i for i in xrange(6) if i > 0]
+        urls2 =  []#["http://www.zjdlr.gov.cn/col/col1071194/index.html?uid=4228212&pageNum=%s" %i for i in xrange(6) if i > 0]
         for url in urls1 + urls2:
             yield scrapy.Request(url=url, callback=self.parse)
 
@@ -90,11 +93,12 @@ class Spider(scrapy.Spider):
         sites = bs_obj.find_all('table', style='border-collapse:collapse; border-color:#333333;font-size:12px;')
         if not sites:
             log_obj.debug(u"%s(%s)没有检测到更多detail" %(self.name, response.url))
-
+            yield response.meta['item']
+            
         try:
-            for table in sites:
+            for site in sites:
                 content_detail = {'addition':{}}
-                data_frame = pd.read_html(table, encoding='utf8')[0]
+                data_frame = pd.read_html(str(site), encoding='gbk')[0] #1
                 col_count = len(data_frame.columns)
                 if col_count % 2 == 0:
                     # 一列标题，下一列为数据
@@ -113,7 +117,7 @@ class Spider(scrapy.Spider):
                 item['content_detail'] = content_detail
                 yield item
         except:
-            log_obj.error("%s（%s）中无法解析%s\n%s" % (self.name, response.url, item['monitor_title'], traceback.format_exc()))
+            log_obj.error("%s（%s）中无法解析%s\n%s" % (self.name, response.url, item['monitor_title'], traceback.format_exc().decode('gbk')))
             yield response.meta['item']
 
     def parse2(self, response):
@@ -125,10 +129,11 @@ class Spider(scrapy.Spider):
         site = bs_obj.find('table', style='border-collapse:collapse; border-color:#333333; font-size:12px;')
         if not site:
             log_obj.debug(u"%s(%s)没有检测到更多detail" % (self.name, response.url))
+            yield response.meta['item']
 
         parcel_data = []
         try:
-            data_frame = pd.read_html(site, encoding='utf8')
+            data_frame = pd.read_html(str(site), encoding='gbk')[0] #2
             a = numpy.array(data_frame)
             title = a[0]
             data_list = a[1:]
@@ -153,7 +158,7 @@ class Spider(scrapy.Spider):
                 item['content_detail'] = content_detail
                 yield item
         except:
-            log_obj.error("%s（%s）中无法解析%s\n%s" % (self.name, response.url, item['monitor_title'], traceback.format_exc()))
+            log_obj.error("%s（%s）中无法解析%s\n%s" % (self.name, response.url, item['monitor_title'], traceback.format_exc().decode('gbk')))
             yield response.meta['item']
 
 if __name__ == '__main__':
