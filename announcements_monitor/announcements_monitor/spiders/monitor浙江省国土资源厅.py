@@ -48,8 +48,8 @@ class Spider(scrapy.Spider):
     allowed_domains = ["www.zjdlr.gov.cn"]
 
     def start_requests(self):
-        urls1 =  []#["http://www.zjdlr.gov.cn/col/col1071192/index.html?uid=4228212&pageNum=%s" %i for i in xrange(6) if i > 0]
-        urls2 =  ["http://www.zjdlr.gov.cn/col/col1071194/index.html?uid=4228212&pageNum=%s" %i for i in xrange(6) if i > 0]
+        urls1 =  ["http://www.zjdlr.gov.cn/col/col1071192/index.html?uid=4228212&pageNum=%s" %i for i in xrange(6) if i > 0]
+        urls2 =  []#["http://www.zjdlr.gov.cn/col/col1071194/index.html?uid=4228212&pageNum=%s" %i for i in xrange(6) if i > 0]
         for url in urls1 + urls2:
             yield scrapy.Request(url=url, callback=self.parse)
 
@@ -104,6 +104,7 @@ class Spider(scrapy.Spider):
                     
                 data_frame = pd.read_html(str(site), encoding='gbk')[0] #1
                 col_count = len(data_frame.columns)
+                print 'data_frame', data_frame
                 if col_count % 2 == 0:
                     # 一列标题，下一列为数据
                     # 先将数据线data frame数据转化为numpy数组，然后将数组reshape改成2列
@@ -139,9 +140,8 @@ class Spider(scrapy.Spider):
         parcel_data = []
         try:
             data_frame = pd.read_html(str(site), encoding='utf8')[0] #2
-            a = numpy.array(data_frame)
-            print 'data_frame', a 
-            for i in xrange(1,len(a)):
+            arr = numpy.array(data_frame)
+            for i in xrange(1,len(arr)):
                 # 从标题中取出地块编号
                 m = re.search(r'(?<=\().*(?=\))', item['monitor_title'])
                 if m:
@@ -149,7 +149,7 @@ class Spider(scrapy.Spider):
                     
                 content_detail = {'addition': {}}
                 # 将第一行标题跟每一列的数据组成一个字典
-                d0 = dict(a[[0, i], :].T)
+                d0 = dict(arr[[0, i], :].T)
                 for key in d0:
                     if key in key_dict:
                         # key_dict[key]将中文键名改成英文的
@@ -158,7 +158,7 @@ class Spider(scrapy.Spider):
                         content_detail['addition'][key] = d0[key]
                 # 若有多行数据，则表示一个地块编号下有多块地，需要在取不同的名字
                 # 另外，网页中表格内的地块编号不对，需要更改
-                if len(a) == 2:
+                if len(arr) == 2:
                     content_detail['parcel_no'] = item['parcel_no']
                 else:
                     if 'parcel_no' not in content_detail:
