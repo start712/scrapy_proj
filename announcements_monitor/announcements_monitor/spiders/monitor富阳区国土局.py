@@ -125,12 +125,16 @@ class Spider(scrapy.Spider):
         if not sites:
             log_obj.debug(u"%s(%s)没有检测到更多detail" % (self.name, response.url))
 
-        for i in xrange(len(sites)):
-            site = sites[i]
+        # 有合并单元格的现象
+        cell_len = [len(site) for site in sites]
+        l0 = [num - max(cell_len) for num in cell_len]
+        normal_row = [i for i in xrange(len(l0)) if l0[i] == 0] # 找出哪几行是正常行
+        short_len = map(lambda x:x[0]-x[1]-1, zip(normal_row[1:],normal_row[:-1])) # 一列中相邻两数相减
+        short_len.append(0) #让这个列表的长度与normal_row一样
+
+        for i in normal_row:
             try:
-                if len(site) != max_len:
-                    log_obj.debug(u"%s(%s)出现不规则数据%s" % (self.name, response.url,[s.get_text(strip=True) for s in site]))
-                    continue
+                site = sites[i]
                 content_detail = \
                     {'parcel_no': site[0].get_text(strip=True),
                      'parcel_location': site[1].get_text(strip=True),
@@ -141,6 +145,18 @@ class Spider(scrapy.Spider):
                      }
                 if '≤' in content_detail['plot_ratio']:
                     content_detail['plot_ratio'] = content_detail['plot_ratio'].split('≤')[-1]
+
+                # 短小列的数据加进正常列里
+                if short_len[normal_row.index(i)] != 0:
+                    row_no = normal_row.index(i)
+                    content_detail['addition']['土地面积情况'] = "%s(%s),%s" %("土地面积",content_detail['purpose'],content_detail['offer_area_m2'])
+                    for j in xrange(row_no + 1, row_no + short_len[normal_row.index(i)] + 1):
+                        site = sites[j]
+                        content_detail['purpose'] = "%s,%s" %(content_detail['purpose'], site[0].get_text(strip=True))
+                        content_detail['offer_area_m2'] = float(content_detail['offer_area_m2']) + float(site[1].get_text(strip=True))
+                        content_detail['offer_area_mu'] = float(content_detail['offer_area_mu']) + float(site[2].get_text(strip=True))
+                        content_detail['plot_ratio'] = float(content_detail['building_area']) / float(content_detail['offer_area_m2'])
+                        content_detail['addition']['土地面积情况'] = content_detail['addition']['土地面积情况'] + "%s(%s),%s" %("土地面积",site[0].get_text(strip=True),site[1].get_text(strip=True))
 
                 item['content_detail'] = content_detail
                 yield item

@@ -82,13 +82,13 @@ class Spider(scrapy.Spider):
         sites = [site.find_all('td') for site in sites if site.b == None and 2<=sites.index(site)<len(sites)-1]  # [@id="list"] [@class="padding10"][position()>1]
         if not sites:
             log_obj.debug(u"%s(%s)没有检测到更多detail" % (self.name, response.url))
-            yield response.meta['item']
 
         # 有合并单元格的现象
         cell_len = [len(site) for site in sites]
         l0 = [num - max(cell_len) for num in cell_len]
         normal_row = [i for i in xrange(len(l0)) if l0[i] == 0] # 找出哪几行是正常行
         short_len = map(lambda x:x[0]-x[1]-1, zip(normal_row[1:],normal_row[:-1])) # 一列中相邻两数相减
+        short_len.append(0) #让这个列表的长度与normal_row一样
 
         for i in normal_row:
             try:
