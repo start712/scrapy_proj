@@ -48,8 +48,8 @@ class Spider(scrapy.Spider):
     allowed_domains = ["www.zjdlr.gov.cn"]
 
     def start_requests(self):
-        urls1 =  ["http://www.zjdlr.gov.cn/col/col1071192/index.html?uid=4228212&pageNum=%s" %i for i in xrange(6) if i > 0]
-        urls2 =  []#["http://www.zjdlr.gov.cn/col/col1071194/index.html?uid=4228212&pageNum=%s" %i for i in xrange(6) if i > 0]
+        urls1 =  ["http://www.zjdlr.gov.cn/col/col1071192/index.html?uid=4228212&pageNum=%s" %i for i in xrange(8) if i > 0]
+        urls2 =  ["http://www.zjdlr.gov.cn/col/col1071194/index.html?uid=4228212&pageNum=%s" %i for i in xrange(8) if i > 0]
         for url in urls1 + urls2:
             yield scrapy.Request(url=url, callback=self.parse)
 
@@ -74,7 +74,6 @@ class Spider(scrapy.Spider):
                     info = sys.exc_info()
                     log_obj.debug(u"%s中存在无法解析的xpath：%s\n原因：%s%s%s" %(self.name, row, info[0], ":", info[1]))
 
-                #csv_report.output_data(items, "result", method = 'a')
                 if re.search(r'.*公告.*', item['monitor_title'].encode('utf8')):
                     item['monitor_re'] = r'.*公告.*'
                     yield scrapy.Request(url=item['monitor_url'], meta={'item': item}, callback=self.parse1, dont_filter=False)
@@ -102,16 +101,16 @@ class Spider(scrapy.Spider):
                     log_obj.debug(u"%s(%s)没有检测到更多detail" %(self.name, response.url))
                     yield response.meta['item']
                     
-                data_frame = pd.read_html(str(site), encoding='gbk')[0] #1
+                data_frame = pd.read_html(str(site), encoding='utf8')[0] #1
                 col_count = len(data_frame.columns)
-                print 'data_frame', data_frame
                 if col_count % 2 == 0:
                     # 一列标题，下一列为数据
                     # 先将数据线data frame数据转化为numpy数组，然后将数组reshape改成2列
                     arr = numpy.reshape(numpy.array(data_frame), (-1, 2))
                     # 去除key中的空格和冒号
                     data_dict = dict(arr)
-                    data_dict = {re.sub(r'\s+|:|：', '', key): data_dict[key] for key in data_dict if key != 'nan'}
+                    r = re.compile(r'\s+|:|：')
+                    data_dict = {r.sub('', key): data_dict[key] for key in data_dict if (type(key) == type(u'') or type(key) == type('')) and key != 'nan' }
                     for key in data_dict:
                         if key in key_dict:
                             # key_dict[key]将中文键名改成英文的
@@ -122,7 +121,7 @@ class Spider(scrapy.Spider):
                 item['content_detail'] = content_detail
                 yield item
         except:
-            log_obj.error("%s（%s）中无法解析%s\n%s" % (self.name, response.url, item['monitor_title'], traceback.format_exc().decode('gbk')))
+            log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, item['monitor_title'], traceback.format_exc().decode('gbk').encode('utf8')))
             yield response.meta['item']
 
     def parse2(self, response):
