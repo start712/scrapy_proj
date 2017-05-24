@@ -121,7 +121,7 @@ class AnnouncementsMonitorPipeline(object):
                 csv_report.output_data([params,], "NEW", title=[u'爬虫编号', u'标题', u'主键', u'发布日期', u'链接', u'其他内容'], method = "a")
         except MySQLdb.IntegrityError:
             logger0.info(params)
-        else:
+        except:
             log_obj.error(u"sql insert failed:%s\nINFO:%s" %(item["monitor_key"],traceback.format_exc()))
 
 
