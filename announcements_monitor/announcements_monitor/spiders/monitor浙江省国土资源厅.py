@@ -102,6 +102,7 @@ class Spider(scrapy.Spider):
                     yield response.meta['item']
                     
                 data_frame = pd.read_html(str(site), encoding='utf8')[0] #1
+                data_frame.fillna('') # 替换缺失值
                 col_count = len(data_frame.columns)
                 if col_count % 2 == 0:
                     # 一列标题，下一列为数据
@@ -137,6 +138,7 @@ class Spider(scrapy.Spider):
         parcel_data = []
         try:
             data_frame = pd.read_html(str(site), encoding='utf8')[0] #2
+            data_frame.fillna('')  # 替换缺失值
             arr = numpy.array(data_frame)
             for i in xrange(1,len(arr)):
                 # 从标题中取出地块编号
