@@ -38,7 +38,7 @@ class data_cleaner(object):
     def get_data(self, length = 100):
         """每次只会读取100条数据，若是长时间没有清洗过数据了，需要更改这个数值"""
         sql = "SELECT `key`, `detail` FROM `monitor` " # LIMIT %s [length,],
-        data = mysql_connecter.connect(sql,  dbname='spider', ip='localhost', user='spider', password='startspider')
+        data = mysql_connecter.connect(sql,  dbname='spider', ip='116.62.230.38', user='spider', password='startspider')
         return data
 
     def data_calculate(self, d):
@@ -282,9 +282,8 @@ class data_cleaner(object):
         if insert_list:
             data_blank = ','.join([row_blank, ] * insert_row_count)  # (%s, %s...),(%s, %s...),(%s, %s...),(%s, %s...)
             sql = "INSERT INTO `土地信息spider`(%s) VALUES%s;" %(','.join(list_col_name), data_blank)#%(sql_col_name,sql_data)
-            #print 'list_col_name', list_col_name
-            #print insert_list
             try:
+                print insert_list
                 mysql_connecter.connect(sql, insert_list, dbname='raw_data', ip='192.168.1.124', user='spider', password='startspider')
                 print u"上传MySQL成功！"
             except MySQLdb.IntegrityError:
@@ -296,5 +295,3 @@ class data_cleaner(object):
 if __name__ == '__main__':
     data_cleaner = data_cleaner()
     data_cleaner.main()
-
-
