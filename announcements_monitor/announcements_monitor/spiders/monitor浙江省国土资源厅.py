@@ -32,15 +32,15 @@ log_obj.cleanup(log_path, if_cleanup=False)  # 是否需要在每次运行程序
 csv_report = csv_report.csv_report()
 
 key_dict = {
-    '宗地坐落':'parcel_location',
-    '宗地编号':'parcel_no',
-    '宗地面积':'offer_area_m2',
-    '容积率':'plot_ratio',
-    '土地用途':'purpose',
-    '起始价':'starting_price_sum',
-    '地块编号':'parcel_no',
-    '地块位置':'parcel_location',
-    '成交价(万元)':'transaction_price_sum'
+    u'宗地坐落':'parcel_location',
+    u'宗地编号':'parcel_no',
+    u'宗地面积':'offer_area_m2',
+    u'容积率':'plot_ratio',
+    u'土地用途':'purpose',
+    u'起始价':'starting_price_sum',
+    u'地块编号':'parcel_no',
+    u'地块位置':'parcel_location',
+    u'成交价(万元)':'transaction_price_sum'
 }
 
 class Spider(scrapy.Spider):
@@ -129,12 +129,10 @@ class Spider(scrapy.Spider):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
         item['parcel_status'] = 'sold'
-
             
         site = bs_obj.find('table', style='border-collapse:collapse; border-color:#333333; font-size:12px;')
         if not site:
             log_obj.debug(u"%s(%s)没有检测到更多detail" % (self.name, response.url))
-            yield response.meta['item']
 
         parcel_data = []
         try:

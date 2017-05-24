@@ -9,6 +9,9 @@
 """
 import sys
 import os
+
+import numpy as np
+import pandas as pd
 import scrapy
 import announcements_monitor.items
 import re
@@ -107,6 +110,7 @@ class Spider(scrapy.Spider):
                         content_detail['offer_area_m2'] += site[0].get_text(strip=True)
                         content_detail['addition'][u'用途'].append([site[0].get_text(strip=True),site[1].get_text(strip=True)])
 
+
                 item['content_detail'] = content_detail
                 yield item
             except:
@@ -124,7 +128,14 @@ class Spider(scrapy.Spider):
         if not sites:
             log_obj.debug(u"%s(%s)没有检测到更多detail" %(self.name, response.url))
 
-        for i in xrange(len(sites)):
+        # 有合并单元格的现象
+        cell_len = [len(site) for site in sites]
+        l0 = [num - max(cell_len) for num in cell_len]
+        normal_row = [i for i in xrange(len(l0)) if l0[i] == 0] # 找出哪几行是正常行
+        short_len = map(lambda x:x[0]-x[1]-1, zip(normal_row[1:],normal_row[:-1])) # 一列中相邻两数相减
+        short_len.append(0) #让这个列表的长度与normal_row一样
+
+        for i in normal_row:
             site = sites[i]
             try:
                 content_detail =\
@@ -133,7 +144,8 @@ class Spider(scrapy.Spider):
                             'offer_area_m2': site[2].get_text(strip=True),
                             'purpose': site[3].get_text(strip=True),
                             'building_area':site[4].get_text(strip=True),
-                            'fixture_date': item['monitor_date']
+                            'fixture_date': item['monitor_date'],
+                            'addition':{}
                             }
 
                 # 建筑面积有时会杂有文字
@@ -146,6 +158,17 @@ class Spider(scrapy.Spider):
                     content_detail['building_area'] =''
                     content_detail['addition'] = {u'建筑面积（M2）':site[4].get_text(strip=True)}
 
+                # 短小列的数据加进正常列里，需要根据具体数据格式修改
+                if short_len[normal_row.index(i)] != 0:
+                    row_no = i
+                    content_detail['addition']['土地面积情况'] = "%s(%s),%s" %("土地面积",content_detail['purpose'],content_detail['offer_area_m2'])
+                    for j in xrange(row_no + 1, row_no + short_len[normal_row.index(i)] + 1):
+                        site = sites[j]
+                        content_detail['purpose'] = "%s,%s" %(content_detail['purpose'], site[1].get_text(strip=True))
+                        content_detail['offer_area_m2'] = float(content_detail['offer_area_m2']) + float(site[0].get_text(strip=True))
+                        content_detail['addition']['土地面积情况'] = content_detail['addition']['土地面积情况'] + "%s(%s),%s" %("土地面积",site[1].get_text(strip=True),site[0].get_text(strip=True))
+
+                """
                 # 有一些条目有合并单元格的情况
                 if site[0].has_attr('rowspan'):
                     length = site[0]['rowspan'] - 1
@@ -156,10 +179,9 @@ class Spider(scrapy.Spider):
                         site = sites[i]
                         content_detail['offer_area_m2'] += site[0].get_text(strip=True)
                         content_detail['addition'][u'建筑面积（M2）'].append([site[0].get_text(strip=True),site[1].get_text(strip=True)])
+                """
 
                 item['content_detail'] = content_detail
-                #log_obj.debug("Bitem['monitor_title']:%s\n%s" % (item['monitor_title'], item['monitor_url']))
-                #log_obj.debug("item:%s" % str(item))
                 yield item
             except:
                 log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))

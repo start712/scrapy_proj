@@ -38,7 +38,7 @@ class data_cleaner(object):
     def get_data(self, length = 100):
         """每次只会读取100条数据，若是长时间没有清洗过数据了，需要更改这个数值"""
         sql = "SELECT `key`, `detail` FROM `monitor` " # LIMIT %s [length,],
-        data = mysql_connecter.connect(sql,  dbname='spider', ip='116.62.230.38', user='spider', password='startspider')
+        data = mysql_connecter.connect(sql,  dbname='spider', ip='localhost', user='spider', password='startspider')
         return data
 
     def data_calculate(self, d):
