@@ -91,6 +91,8 @@ class AnnouncementsMonitorPipeline(object):
                 if not item["parcel_no"] and "parcel_no" in item['content_detail']:
                     item["parcel_no"] = item['content_detail']["parcel_no"]#re.sub(r'\s+', '', item['content_detail']["parcel_no"])
                 # 对content_detail中增加一些内容便于清洗后的检查工作
+                if "parcel_no" not in item['content_detail']:
+                    item['content_detail']["parcel_no"] = item["parcel_no"]
                 item['content_detail']['status'] = item['parcel_status']
                 item['content_detail']['fixture_date'] = item["monitor_date"]
                 item['content_detail']['url'] = item["monitor_url"]
