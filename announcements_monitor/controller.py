@@ -138,9 +138,8 @@ class controller(object):
         # 发送log
         date0 = datetime.datetime.date(datetime.datetime.today() + datetime.timedelta(days=-1))
         log_file = [
-            r'%s/log/sql_update(%s).log' % (os.getcwd(), date0),
-            r'%s/log/spider(%s).log' % (os.getcwd(), date0),
-            r'%s/log/duplicate_entry(%s).log' % (os.getcwd(), date0)
+            r'%s/log/pipelines_error(%s).log' % (os.getcwd(), date0),
+            r'%s/log/spider_DEBUG(%s).log' % (os.getcwd(), date0)
         ]
         if os.path.exists(log_file[0]) and os.path.exists(log_file[1]):
             title = "日常报告%s" % date0

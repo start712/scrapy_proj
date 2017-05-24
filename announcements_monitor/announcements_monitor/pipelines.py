@@ -15,7 +15,7 @@ import json
 import copy
 import traceback
 
-log_path = r'%s/log/sql_update(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
+log_path = r'%s/log/pipelines_error(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
 
 sys.path.append(sys.prefix + "\\Lib\\MyWheels")
 reload(sys)
@@ -24,8 +24,7 @@ import set_log  # log_obj.debug(文本)  "\x1B[1;32;41m (文本)\x1B[0m"
 import csv_report
 csv_report = csv_report.csv_report()
 
-log_obj = set_log.Logger(log_path, set_log.logging.WARNING,
-                         set_log.logging.DEBUG)
+log_obj = set_log.Logger(log_path, set_log.logging.WARNING, set_log.logging.DEBUG)
 log_obj.cleanup(log_path, if_cleanup=False)  # 是否需要在每次运行程序前清空Log文件
 
 import logging
@@ -77,32 +76,38 @@ class AnnouncementsMonitorPipeline(object):
 
 解决方案是对变量进行保存，在保存的变量进行操作，通过互斥确保变量不被修改
         """
-        item = copy.deepcopy(item0)
-        item_list = ['monitor_id', 'monitor_title', 'monitor_key', 'monitor_date', 'monitor_url', 'monitor_content',  'content_detail', 'parcel_no', 'monitor_re', 'parcel_status']
-        s_list = []
-        for s in item_list:
-            if s not in item:
-                item[s] = ''
-                s_list.append(s)
-        #if s_list:
-        #    log_obj.debug(u'%s中为空字符串的字段为%s' %(item['monitor_title'], s_list))
-        item["monitor_date"] = re.sub(r'[\(（\)）\[\]]', '', item["monitor_date"])
+        try:
+            item = copy.deepcopy(item0)
+            item_list = ['monitor_id', 'monitor_title', 'monitor_key', 'monitor_date', 'monitor_url', 'monitor_content', 'parcel_no', 'monitor_re', 'parcel_status', 'content_detail']
+            for s in item_list:
+                if s not in item:
+                    item[s] = ''
+            
+            #if s_list:
+            #    log_obj.debug(u'%s中为空字符串的字段为%s' %(item['monitor_title'], s_list))
+            item["monitor_date"] = re.sub(r'[\(（\)）\[\]]', '', item["monitor_date"])
 
-        if type(item['content_detail']) == type({}) and not item["parcel_no"] and "parcel_no" in item['content_detail']:
-            item["parcel_no"] = item['content_detail']["parcel_no"]#re.sub(r'\s+', '', item['content_detail']["parcel_no"])
-        re_type = re.sub('\\pP|\\pS', '', item["monitor_re"])
-        if item["parcel_no"]:
-            item["monitor_key"] = "%s/%s/%s/%s" % (item["monitor_id"], item["monitor_date"], re_type, item["parcel_no"])#re.sub(r'\s+', '', "%s/%s/%s" % (item["monitor_id"], item["monitor_date"], item["parcel_no"]))
-        else:
-            item["monitor_key"] = "raw_page/%s/%s/%s/%s" % (item["monitor_id"], item["monitor_date"], re_type, item["monitor_title"])#re.sub(r'\s+', '', "raw_page/%s/%s/%s" % (item["monitor_id"], item["monitor_date"], item["monitor_title"]))
+            if type(item['content_detail']) == type({}):
+                if not item["parcel_no"] and "parcel_no" in item['content_detail']:
+                    item["parcel_no"] = item['content_detail']["parcel_no"]#re.sub(r'\s+', '', item['content_detail']["parcel_no"])
+                # 对content_detail中增加一些内容便于清洗
+                item['content_detail']['status'] = item['parcel_status']
+                item['content_detail']['fixture_date'] = item["monitor_date"]
 
-        item['content_detail']['status'] = item['parcel_status']
-        item['content_detail']['fixture_date'] = item["monitor_date"]
-        item['content_detail'] = json.dumps(item['content_detail'])#json.dumps({key: re.sub(r'\s+', '', str(item['content_detail'][key])) for key in item['content_detail']})
+            re_type = re.sub('\\pP|\\pS', '', item["monitor_re"])
+            if item["parcel_no"]:
+                item["monitor_key"] = "%s/%s/%s/%s" % (item["monitor_id"], item["monitor_date"], re_type, item["parcel_no"])#re.sub(r'\s+', '', "%s/%s/%s" % (item["monitor_id"], item["monitor_date"], item["parcel_no"]))
+            else:
+                item["monitor_key"] = "raw_page/%s/%s/%s/%s" % (item["monitor_id"], item["monitor_date"], re_type, item["monitor_title"])#re.sub(r'\s+', '', "raw_page/%s/%s/%s" % (item["monitor_id"], item["monitor_date"], item["monitor_title"]))
 
-        query=self.dbpool.runInteraction(self._conditional_insert,item)#调用插入的方法
-        #query.addErrback(self._handle_error,asynItem,spider)#调用异常处理方法
-        return item
+
+            item['content_detail'] = json.dumps(item['content_detail'])#json.dumps({key: re.sub(r'\s+', '', str(item['content_detail'][key])) for key in item['content_detail']})
+
+            query=self.dbpool.runInteraction(self._conditional_insert,item)#调用插入的方法
+            #query.addErrback(self._handle_error,asynItem,spider)#调用异常处理方法
+            return item
+        except:
+            log_obj.error(u"process item error:%s\nINFO:%s" %(item["monitor_key"],traceback.format_exc()))
 
     #写入数据库中
     def _conditional_insert(self,tx,item):
@@ -112,12 +117,12 @@ class AnnouncementsMonitorPipeline(object):
             #csv_report.output_data(item, "result", method='a')
             tx.execute(sql,params)
             if params:
-                log_obj.debug(u"key saved:%s" % item["monitor_key"])
+                logger0.info(u"key saved:%s" % item["monitor_key"])
                 csv_report.output_data([params,], "NEW", title=[u'爬虫编号', u'标题', u'主键', u'发布日期', u'链接', u'其他内容'], method = "a")
         except MySQLdb.IntegrityError:
             logger0.info(params)
         else:
-            log_obj.debug(u"sql insert failed:%s\nINFO:%s" %(item["monitor_key"],traceback.format_exc()))
+            log_obj.error(u"sql insert failed:%s\nINFO:%s" %(item["monitor_key"],traceback.format_exc()))
 
 
     #错误处理方法
