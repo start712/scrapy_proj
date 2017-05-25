@@ -37,8 +37,50 @@ class data_cleaner(object):
 
     def get_data(self, length = 100):
         """每次只会读取100条数据，若是长时间没有清洗过数据了，需要更改这个数值"""
-        sql = "SELECT `key`, `detail` FROM `monitor` WHERE `parcel_no` <> ''" # LIMIT %s [length,],
+        sql = r"SELECT `key`, `detail` FROM `monitor` WHERE `parcel_no` <> ''" # LIMIT %s [length,],
         data = mysql_connecter.connect(sql,  dbname='spider', ip='116.62.230.38', user='spider', password='startspider')
+        return data
+
+    def duplicate_check(self, data):
+        # 由于此处是一条sql代码上传多条数据，所以要确保这条sql代码里的数据没有重复
+        d = {}
+        key_list = data.keys()
+        for key in key_list:
+            # 没有地块编号的不做处理
+            if 'parcel_no' not in data[key]:
+                continue
+
+            parcel_no = data[key]['parcel_no']
+            if parcel_no not in d:
+                d[parcel_no] = key
+            else:
+                # 以已售的数据为主
+                if data[d[parcel_no]]['status'] == 'sold':
+                    new_data = data[d[parcel_no]]
+                    old_data = data[key]
+                else:
+                    new_data = data[key]
+                    old_data = data[d[parcel_no]]
+                # 数据取出来后，删除原有数据
+                data.pop(key)
+                data.pop(d[parcel_no])
+
+                # 需要更新数据，只要是成交的数据都试图更新一遍
+                d0 = {} # 创建新的数据字典
+                for k0 in set(new_data.keys() + old_data.keys()):
+                    # 新旧数据不一致，记录下载
+                    if k0 in old_data.keys() and k0 in new_data.keys() and old_data[k0] != new_data[k0]:
+                        with open(os.getcwd() + '\cleaner_log\changed_data.txt', 'a') as f:
+                            f.write('时间：%s\n地块%s中的"%s"新旧数据有出入，已替换成新数据\n' % (
+                            datetime.datetime.now(), new_data['parcel_no'], k0))
+                    # 往字典里写入数据，若新旧数据都有，则用新数据
+                    if k0 in old_data.keys():
+                        d0[k0] = old_data[k0]
+                    if k0 in new_data.keys():
+                        d0[k0] = new_data[k0]
+                data[key] = d0
+            print key
+
         return data
 
     def data_calculate(self, d):
@@ -113,8 +155,10 @@ class data_cleaner(object):
             return None, 0
         keys = list(new_data.viewkeys())
         key_str = ','.join(keys)
+        # 确保sql代码中的数据与数据库中的数据不重复
+        # 有待商榷：是每次都调用数据库来判断地块已经存在了，还是一起次先取出所有地块的编号，在Python中查找
         check_sql = "SELECT %s FROM `raw_data`.`土地信息spider` WHERE `parcel_no` = %s" %(key_str, r'%s')
-        res = mysql_connecter.connect(check_sql, [new_data['parcel_no'],])
+        res = mysql_connecter.connect(check_sql, [new_data['parcel_no'],], dbname='raw_data', ip='192.168.1.124', user='spider', password='startspider')
         if res:
             #已经有旧数据了
             res = res[0]
@@ -203,6 +247,7 @@ class data_cleaner(object):
     def main(self):
         # 获取数据
         data = {row[0]: json.loads(row[1]) for row in self.get_data()}
+        data = self.duplicate_check(data)
         with open('list_structure.txt', 'r') as f:
             list_structure = f.read()
             list_structure = list_structure.split(',')
@@ -222,10 +267,9 @@ class data_cleaner(object):
                     data0[s] = data[key][s]
                 else:
                     data0[s] = ''
-
+            #print key
             data0['spider_key'] = key
 
-            # 有待商榷：是每次都调用数据库来判断地块已经存在了，还是一起次先取出所有地块的编号，在Python中查找
             # parcel_no字段括号更新
             data0['parcel_no'] = self.clean_parcel_no(data0['parcel_no'])
 
@@ -272,8 +316,7 @@ class data_cleaner(object):
                 #print sql
                 #print data
                 try:
-                    mysql_connecter.connect(sql, data, dbname='raw_data', ip='192.168.1.124', user='spider',
-                                            password='startspider')
+                    mysql_connecter.connect(sql, data, dbname='raw_data', ip='192.168.1.124', user='spider', password='startspider')
                     print u"更新MySQL（%s字段）成功！" %col
                 except:
                     log_obj.debug(u"sql update failed:\n%s" % traceback.format_exc())
@@ -285,11 +328,11 @@ class data_cleaner(object):
             try:
                 mysql_connecter.connect(sql, insert_list, dbname='raw_data', ip='192.168.1.124', user='spider', password='startspider')
                 print u"上传MySQL成功！"
-            except MySQLdb.IntegrityError:
-                pass
-            else:
-                log_obj.debug(u"sql insert failed:\n%s" %traceback.format_exc())
-
+            #except MySQLdb.IntegrityError:
+            #    pass
+            except:
+                print u"数据上传失败！！"
+                print u"sql insert failed:\n%s" %traceback.format_exc()
 
 if __name__ == '__main__':
     data_cleaner = data_cleaner()
