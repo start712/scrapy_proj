@@ -82,7 +82,10 @@ class AnnouncementsMonitorPipeline(object):
             for s in item_list:
                 if s not in item:
                     item[s] = ''
-            
+
+            # 如果爬虫中没有注明是那个城市，默认为杭州
+            if not item['monitor_city']:
+                item['monitor_city'] = '杭州'
             #if s_list:
             #    log_obj.debug(u'%s中为空字符串的字段为%s' %(item['monitor_title'], s_list))
             item["monitor_date"] = re.sub(r'[\(（\)）\[\]]', '', item["monitor_date"])
@@ -114,8 +117,8 @@ class AnnouncementsMonitorPipeline(object):
 
     #写入数据库中
     def _conditional_insert(self,tx,item):
-        sql = "INSERT INTO monitor(`crawler_id`, `status`, `title`, `key`, `re`, `fixture_date`, `parcel_no`, `content`, `url`, `detail`) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-        params = (item["monitor_id"], item['parcel_status'], item["monitor_title"], item["monitor_key"], item["monitor_re"], item["monitor_date"], item["parcel_no"],item["monitor_content"], item["monitor_url"], item['content_detail'])
+        sql = "INSERT INTO monitor(`crawler_id`, `status`, `title`, `city`, `key`, `re`, `fixture_date`, `parcel_no`, `content`, `url`, `detail`) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+        params = (item["monitor_id"], item['parcel_status'], item["monitor_title"], item["monitor_city"], item["monitor_key"], item["monitor_re"], item["monitor_date"], item["parcel_no"],item["monitor_content"], item["monitor_url"], item['content_detail'])
         try:
             #csv_report.output_data(item, "result", method='a')
             tx.execute(sql,params)
