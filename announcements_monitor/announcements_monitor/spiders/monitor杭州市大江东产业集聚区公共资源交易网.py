@@ -72,6 +72,8 @@ class Spider(scrapy.Spider):
                     yield scrapy.Request(url=item['monitor_url'], meta={'item': item}, callback=self.parse1, dont_filter=True)
                 elif response.url == self.url2:
                     yield scrapy.Request(url=item['monitor_url'], meta={'item': item}, callback=self.parse2, dont_filter=True)
+                else:
+                    yield item
             except:
                 log_obj.debug("%s中存在无法解析的xpath：%s\n原因：%s" %(self.name, site, traceback.format_exc()))
 
@@ -104,7 +106,7 @@ class Spider(scrapy.Spider):
     def parse2(self, response):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
-        item['parcel_status'] = 'onsell'
+        item['parcel_status'] = 'sold'
         #item['content_html'] = bs_obj.prettify()
         sites = bs_obj.find("table", class_="MsoNormalTable").find_all('tr')
         # 去掉标题
