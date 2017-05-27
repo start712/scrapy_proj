@@ -28,18 +28,36 @@ log_obj = set_log.Logger(log_path, set_log.logging.WARNING,
 log_obj.cleanup(log_path, if_cleanup=False)  # 是否需要在每次运行程序前清空Log文件
 csv_report = csv_report.csv_report()
 # 对应于数据库中字段名的标题
-needed_item = ['parcel_no', 'offer_area_m2', 'purpose', 'plot_ratio', 'starting_price_sum']
+needed_item = ['parcel_no', 'offer_area_m2', 'purpose', 'plot_ratio', 'starting_price_sum', 'parcel_location',
+               'starting_price', 'starting_price_sum', 'parcel_name', 'floor_starting_price']
 
 # 地域名对应的列表中，有三空要填
 # 第一个是网页表格中标题的行数
 # 第二个是网页表格的标题内容，needed_item以外的标题寸存在addition中，
 #       这里可以只写需要的前N个标题，后面代码里会按这里的标题顺序存储数据，此外的标题对应的数据不予爬取
-# 第三个是之前N个标题中不需要爬取的标题，可以为空但是不能不填，为了防止有较大垃圾数据
+# 第三个是之前N个标题中不需要爬取的标题，可以为空但是不能不填，为了防止有较大垃圾数据，必须要为列表
 title_structure = {
     '挂牌出让公告':{
+        '市局':[2, ['parcel_no', 'parcel_location', 'purpose', 'offer_area_m2', 'starting_price_sum',
+                  '保证金（万元）', 'plot_ratio', '绿地率（%）', '建筑密度（%）', '建筑限高（米）'], []],
         '奉化':[1, ['parcel_no', 'offer_area_m2', 'purpose', '出让年限（年）', 'plot_ratio',
                   '建筑密度', '绿地率', '投资强度（≥万元／公顷）', 'starting_price_sum', '保证金（万元）'],[]],
-        '江北':[1, ]
+        '余姚':[2, ['parcel_no', 'parcel_location', 'offer_area_m2', 'purpose', '出让年限（年）',
+                  'plot_ratio', '建筑密度', '绿地率', 'starting_price', 'starting_price_sum', '竞买保证金(万元）'], []],
+        '江北':[1, ['parcel_no', 'parcel_name', 'parcel_location', 'offer_area_m2', 'purpose', 'plot_ratio',
+                  '建筑密度(≤)', '绿地率', '建筑高度(≤)', '出让年限', '竞买保证金(万元)', '出让起始价(万元/亩)'], []],
+        '慈溪':[2, ['序号', 'parcel_no', 'parcel_location', 'purpose', 'offer_area_m2', '竞买保证金（万元）',
+                  'starting_price_sum', 'plot_ratio', '建筑密度（%）', '绿地率（%）', '建筑限高（米）'], ['序号',]],
+        '北仑':[2, ['序号', 'parcel_no', 'parcel_location', 'purpose', 'offer_area_m2', 'plot_ratio',
+                  '绿地率（%）', '建筑密度（%）', '建筑高度(米)', '出让年限（年）', '保证金（万元）', 'floor_starting_price'], ['序号',]],
+        '象山':[0], # 表示需要单独设置一个解析方法
+        '鄞州':[1, ['parcel_no', 'parcel_name', 'offer_area_m2', 'purpose', '建筑密度', 'plot_ratio', '绿地率',
+                  '建筑高度', '出让年限（年）', '竞买保证金(万元)', 'floor_starting_price'], ['序号',]]
+        '保税区':[2, ['序号', 'parcel_name', 'offer_area_m2', 'purpose', 'purpose', '绿地率', '建筑系数',
+                   '限高（m）', '出让年限', '投资强度(万元/亩）', '竞买保证金（万元）', 'starting_price_sum'], []],
+        '镇海':[1, ['parcel_name', 'parcel_location', 'offer_area_m2', 'purpose', '出让年限', '建筑密度',
+                  'plot_ratio', '建筑高度', '绿地率'], []]
+        '宁海':[0] # 表示需要单独设置一个解析方法
               },
     '出让结果公告':{}
 }
@@ -50,7 +68,7 @@ class Spider(scrapy.Spider):
     allowed_domains = ["www.yhland.gov.cn"]
 
     def start_requests(self):
-        # 成交信息
+        # http://www.nblr.gov.cn/showpage2/pubchief.jsp?type=tdcrgg
         self.urls1 =  ["http://www.nblr.gov.cn/show3.do?method=getSomeInfo_list&name=kyqgpcrgg&page=%s" % i for i in xrange(5) if i > 0]
         self.urls2 =  ["http://www.nblr.gov.cn/show3.do?method=getSomeInfo_list&name=kyqgpcrgg&page=%s" % i for i in xrange(5) if i > 0]
 
