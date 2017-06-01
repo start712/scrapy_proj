@@ -32,13 +32,20 @@ NEWSPIDER_MODULE = 'announcements_monitor.spiders'
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
 
+# 防止溢出
+SPEED_TOTAL_ITEMS=10000
+SPEED_T_RESPONSE=0.25
+SPEED_ITEMS_PER_DETAIL=100
+SPEED_PIPELINE_ASYNC_DELAY=3
+SPEED_SPIDER_BLOCKING_DELAY=0.2
+
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 #CONCURRENT_REQUESTS = 32
 
 # Configure a delay for requests for the same website (default: 0)
 # See http://scrapy.readthedocs.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-#DOWNLOAD_DELAY = 3
+DOWNLOAD_DELAY = 3
 # The download delay setting will honor only one of:
 #CONCURRENT_REQUESTS_PER_DOMAIN = 16
 #CONCURRENT_REQUESTS_PER_IP = 16
