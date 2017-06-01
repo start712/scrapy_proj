@@ -76,7 +76,7 @@ class MyproxiesSpiderMiddleware(object):
                 proxy = proxies_list[random.randrange(1,100,1)]
                 # 验证代理
                 proxies = {"http": "http://" + proxy, "https": "http://" + proxy}
-                resp0 = requests.get("http://www.qq.com/robots.txt", proxies=proxies)
+                resp0 = requests.get("http://www.qq.com/robots.txt", proxies=proxies, timeout = 30)
                 s_code = resp0.status_code
                 if s_code == 200:
                     break
