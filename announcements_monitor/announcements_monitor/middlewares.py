@@ -70,7 +70,8 @@ class MyproxiesSpiderMiddleware(object):
     def process_request(self, request, spider):
         while True:
             try:
-                resp = requests.get('http://api.goubanjia.com/api/get.shtml?order=15802e180b819c13b343a22dd81e78d0&num=100&area=%E4%B8%AD%E5%9B%BD&carrier=0&protocol=1&an1=1&sp1=1&sort=1&system=1&distinct=0&rettype=1&seprator=%0D%0A')
+                resp = requests.get('http://api.goubanjia.com/api/get.shtml?order=15802e180b819c13b343a22dd81e78d0&num=100&area=%E4%B8%AD%E5%9B%BD&carrier=0&protocol=1&an1=1&sp1=1&sort=1&system=1&distinct=0&rettype=1&seprator=%0D%0A',
+                                    timeout = 30)
                 proxies_list = re.split('\s+', resp.text)
                 proxy = proxies_list[random.randrange(1,100,1)]
                 # 验证代理
