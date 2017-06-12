@@ -61,7 +61,7 @@ class AnnouncementsMonitorSpiderMiddleware(object):
         spider.logger.info('Spider opened: %s' % spider.name)
 
 
-
+"""
 class MyproxiesSpiderMiddleware(object):
 
     def __init__(self, ip=''):
@@ -85,3 +85,4 @@ class MyproxiesSpiderMiddleware(object):
 
         request.meta["proxy"] = "http://" + proxy
         print 'request.meta["proxy"]: ', request.meta["proxy"]
+"""

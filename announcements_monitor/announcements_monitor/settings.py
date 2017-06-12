@@ -33,7 +33,7 @@ NEWSPIDER_MODULE = 'announcements_monitor.spiders'
 ROBOTSTXT_OBEY = True
 
 # 防止溢出
-SPEED_TOTAL_ITEMS=10000
+SPEED_TOTAL_ITEMS=100
 SPEED_T_RESPONSE=0.25
 SPEED_ITEMS_PER_DETAIL=100
 SPEED_PIPELINE_ASYNC_DELAY=3
@@ -132,9 +132,10 @@ SCHEDULER_MEMORY_QUEUE = 'scrapy.squeues.FifoMemoryQueue'
 
 # ENCODING
 FEED_EXPORT_ENCODING = 'utf-8'
-
+"""
 DOWNLOADER_MIDDLEWARES = {
 #    'myproxies.middlewares.MyCustomDownloaderMiddleware': 543,
     'scrapy.contrib.downloadermiddleware.httpproxy.HttpProxyMiddleware': 543,
     'announcements_monitor.middlewares.MyproxiesSpiderMiddleware': 125
 }
+"""

@@ -110,7 +110,7 @@ class Spider(scrapy.Spider):
                     arr = numpy.reshape(numpy.array(data_frame), (-1, 2))
                     # 去除key中的空格和冒号
                     data_dict = dict(arr)
-                    r = re.compile(r'\s+|:|：')
+                    r = re.compile(ur'\s+|:|：')
                     data_dict = {r.sub('', key): data_dict[key] for key in data_dict if (type(key) == type(u'') or type(key) == type('')) and key != 'nan' }
                     for key in data_dict:
                         if key in key_dict:
