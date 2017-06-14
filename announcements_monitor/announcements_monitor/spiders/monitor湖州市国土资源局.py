@@ -40,7 +40,7 @@ replacement = {u'地块 名称':'parcel_no',
                u'起拍价（万元）':'starting_price_sum'}
 
 class Spider(scrapy.Spider):
-    name = "511706"
+    name = "511707"
     allowed_domains = ["www.sxztb.gov.cn"]
 
     def start_requests(self):
