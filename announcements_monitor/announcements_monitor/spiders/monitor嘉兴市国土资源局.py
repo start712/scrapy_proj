@@ -50,13 +50,6 @@ title_type3 = [[u'\n\n编号\n\n\n界址（空间范围）\n\n\n土地\n面积 (
                u'\n\n容积率\n\n\n建筑密度\n\n'],
                ['parcel_no', 'parcel_location', 'offer_area_m2', 'purpose', 'plot_ratio', '建筑密度',
                 '出让年限', 'starting_price_sum', '保证金']]
-headers = {
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Accept-Language": "en-US,en;q=0.5",
-    "Connection": "keep-alive",
-    "User-Agent":"Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:54.0) Gecko/20100101 Firefox/54.0"
-    }
 
 class Spider(scrapy.Spider):
     name = "511708"
@@ -67,7 +60,7 @@ class Spider(scrapy.Spider):
         self.urls2 = ["http://www.jxgtzy.gov.cn/tdsc/tdgycr/tdcrjggs/index.html", ] + ["http://www.jxgtzy.gov.cn/tdsc/tdgycr/tdcrjggs/index_%s.html" % i for i in xrange(3) if i > 0]
 
         for url in self.urls1 + self.urls2:
-            yield scrapy.Request(url=url, headers=headers, callback=self.parse)
+            yield scrapy.Request(url=url, callback=self.parse)
 
     def parse(self, response):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
