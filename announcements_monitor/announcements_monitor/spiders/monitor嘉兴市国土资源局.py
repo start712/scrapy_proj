@@ -50,10 +50,16 @@ title_type3 = [[u'\n\n编号\n\n\n界址（空间范围）\n\n\n土地\n面积 (
                u'\n\n容积率\n\n\n建筑密度\n\n'],
                ['parcel_no', 'parcel_location', 'offer_area_m2', 'purpose', 'plot_ratio', '建筑密度',
                 '出让年限', 'starting_price_sum', '保证金']]
+headers = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Connection": "keep-alive",
+    "User-Agent":"Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:54.0) Gecko/20100101 Firefox/54.0"
+    }
 
 class Spider(scrapy.Spider):
     name = "511708"
-    allowed_domains = ["www.hzgtj.gov.cn"]
 
     def start_requests(self):
         # 嘉兴相应网址的index的系数，index_1代表第二页
@@ -61,7 +67,7 @@ class Spider(scrapy.Spider):
         self.urls2 = ["http://www.jxgtzy.gov.cn/tdsc/tdgycr/tdcrjggs/index.html", ] + ["http://www.jxgtzy.gov.cn/tdsc/tdgycr/tdcrjggs/index_%s.html" % i for i in xrange(3) if i > 0]
 
         for url in self.urls1 + self.urls2:
-            yield scrapy.Request(url=url, callback=self.parse)
+            yield scrapy.Request(url=url, headers=headers, callback=self.parse)
 
     def parse(self, response):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
@@ -76,10 +82,11 @@ class Spider(scrapy.Spider):
                 item['monitor_id'] = self.name
                 item['monitor_title'] = e_tds[0].get_text(strip=True) # 标题
                 item['monitor_date'] = e_tds[1].get_text(strip=True) # 成交日期 site.xpath('td[3]/text()').extract_first()
-                item['monitor_url'] = "http://www.jxgtzy.gov.cn/tdsc/tdgycr/tdcrjggs" + re.sub(ur'\./', '/', e_tds[0].a.get('href')) # 链接
                 if response.url in self.urls1:
+                    item['monitor_url'] = "http://www.jxgtzy.gov.cn/tdsc/tdgycr/tdzpgxxgg" + re.sub(ur'\./', '/',e_tds[0].a.get('href'))
                     yield scrapy.Request(item['monitor_url'],meta={'item':item},callback=self.parse1, dont_filter=True)
                 elif response.url in self.urls2:
+                    item['monitor_url'] = "http://www.jxgtzy.gov.cn/tdsc/tdgycr/tdcrjggs" + re.sub(ur'\./', '/',e_tds[0].a.get('href'))  # 链接
                     yield scrapy.Request(item['monitor_url'],meta={'item':item},callback=self.parse2, dont_filter=True)
                 else:
                     yield item
@@ -87,15 +94,15 @@ class Spider(scrapy.Spider):
                 log_obj.error(u"%s中无法解析%s\n原因：%s" %(self.name, e_tr, traceback.format_exc()))
 
     def parse1(self, response):
-        print 11111111111111
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
         item['parcel_status'] = 'onsell'
-        e_table = bs_obj.find_all('div', align='center')
-        e_trs = e_table.find_all('tr')[2:]
-        print 'parse1, e_trs', e_trs
-        for e_tr in e_trs:
-            try:
+        try:
+            e_table = bs_obj.find('div', align='center')
+            if not e_table:
+                e_table = bs_obj.find('table', attrs={'cellspacing':'0', 'cellpadding':'0', 'border':'1'})
+            e_trs = e_table.find_all('tr')[2:]
+            for e_tr in e_trs:
                 title = [row.get_text() for row in e_table.find_all('tr')[0:2]]
                 if title == title_type1[0]:
                     title = title_type1[1]
@@ -121,21 +128,22 @@ class Spider(scrapy.Spider):
 
                 item['content_detail'] = content_detail
                 yield item
-            except:
-                log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, e_trs, traceback.format_exc()))
-                yield response.meta['item']
+        except:
+            log_obj.error("%s（%s）中无法解析\n%s" %(self.name, response.url, traceback.format_exc()))
+            yield response.meta['item']
 
     def parse2(self, response):
-        print 222222222222
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
         item['parcel_status'] = 'sold'
         try:
             e_table = bs_obj.find('table', class_='MsoNormalTable')
             e_trs = e_table.find_all('tr')
-            print 'parse2, e_trs', e_trs
             for e_tr in e_trs:
                 row = [e_td.get_text(strip=True) for e_td in e_tr.find_all('td')]
+                # 去掉不必要的数据
+                if len(row) < 3 or row[0] == u'公告号':
+                    continue
 
                 if re.search(ur'嘉土南.*|嘉土告字经开.*', item['monitor_title']):
                     item['monitor_re'] = ur'嘉土南.*|嘉土告字经开.*'
@@ -156,7 +164,7 @@ class Spider(scrapy.Spider):
                     }
 
                 elif re.search(ur'嘉土秀洲.*', item['monitor_title']):
-                    m = re.search('嘉土秀洲.+?号', item['monitor_title'])
+                    m = re.search(ur'嘉土秀洲.+?号', item['monitor_title'])
                     item['monitor_re'] = ur'嘉土秀洲.+?号'
                     if m:
                         parcel_no = m.group()
@@ -177,7 +185,7 @@ class Spider(scrapy.Spider):
                 item['content_detail'] = content_detail
                 yield item
         except:
-            log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, e_trs, traceback.format_exc()))
+            log_obj.error("%s（%s）中无法解析\n%s" %(self.name, response.url, traceback.format_exc()))
             yield response.meta['item']
 
 if __name__ == '__main__':
