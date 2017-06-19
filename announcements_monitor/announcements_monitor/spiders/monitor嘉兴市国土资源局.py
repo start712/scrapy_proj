@@ -103,6 +103,8 @@ class Spider(scrapy.Spider):
                     title = title_type2[1]
                 elif title == title_type3[0]:
                     title = title_type3[1]
+                else:
+                    raise
 
                 e_tds = e_tr.find_all('td')
                 row = [e_td.get_text(strip=True) for e_td in e_tds]

@@ -96,11 +96,7 @@ class Spider(scrapy.Spider):
         item['parcel_status'] = 'onsell'
 
         try:
-            e_table = bs_obj.table
-            while e_table.table:
-                e_table = e_table.table
-
-            e_trs = e_table.find_all('tr')[2:]
+            e_trs = bs_obj.find_all(self.attr_re)
             for e_tr in e_trs:
                 e_tds = e_tr.find_all('td')
                 row = [e_td.get_text() for e_td in e_tds]
@@ -118,7 +114,6 @@ class Spider(scrapy.Spider):
         except:
             log_obj.error("%s（%s）中无法解析\n%s" %(self.name, response.url, traceback.format_exc()))
             yield response.meta['item']
-
 
     def parse2(self, response):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
@@ -151,8 +146,8 @@ class Spider(scrapy.Spider):
             log_obj.error("%s（%s）中无法解析\n%s" %(self.name, response.url, traceback.format_exc()))
             yield response.meta['item']
 
-    def attr_re(self, r):
-        pass
+    def attr_re(self, tag):
+        return tag.name == 'tr' and re.search(r'^HEIGHT:', tag.get('style'))
 
 if __name__ == '__main__':
     pass
@@ -161,5 +156,4 @@ bs = bs4.BeautifulSoup(s,'html.parser')
 bs.find_all('tr')
 e_trs = bs.find_all('tr')
 [e_trs[0].get_text(), e_trs[1].get_text()]
-
 """
