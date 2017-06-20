@@ -49,6 +49,8 @@ re_type = {
 }
 title_type1 = {7:['parcel_location', 'offer_area_m2', 'plot_ratio', '建筑密度（%）'
                '绿地率（%）', 'starting_price_sum', '保证金(万元)'],
+               8:['序号', 'parcel_no', 'offer_area_m2', 'purpose',
+                   'plot_ratio', '建筑密度', '绿地率',  'starting_price_sum', '保证金(万元)'],
                9:['parcel_location', 'offer_area_m2', 'purpose', 'plot_ratio', '建筑密度（%）'
                '绿地率（%）', '出让年限(年)', 'starting_price_sum', '保证金(万元)'],
                11:['序号', 'parcel_location', 'parcel_name', 'offer_area_m2', 'purpose',
@@ -58,7 +60,7 @@ title_type1 = {7:['parcel_location', 'offer_area_m2', 'plot_ratio', '建筑密�
                '绿地率（%）', '出让年限(年)', '投资强度（万元/亩）', '土地产出（万元/亩）',
                 '土地税收(万元)', 'starting_price_sum', '保证金(万元)'],
                }
-title_height1 = {7:1, 9:2, 11:1, 12:2}
+title_height1 = {7:1, 8:1, 9:2, 11:1, 12:2}
 class Spider(scrapy.Spider):
     name = "511712"
 
@@ -96,15 +98,16 @@ class Spider(scrapy.Spider):
         try:
             e_page = bs_obj.find('div', attrs={'id':'infoContent', 'class':'SconC'})
             # 处理网页文字
-
+            extra_data = False
             e_ps = e_page.find_all('p')
             row_ps = [e_p.get_text(strip=True) for e_p in e_ps]
-            d = {}
+            d = {rs:[] for rs in re_type}
             for row_s in row_ps:
                 for rs in re_type:
                     m = re.search(re_type[rs], row_s)
                     if m:
-                        d[rs] = m.group()
+                        d[rs].append(m.group())
+                        extra_data = True
 
             # 处理网页中的表格
             e_table = e_page.table
@@ -113,13 +116,16 @@ class Spider(scrapy.Spider):
             #if len(test_row) not in title_type1:
             #    raise
             e_trs = e_trs[title_height1[len(test_row)]:]
-            for e_tr in e_trs:
+            for i in xrange(len(e_trs)):
+                e_tr = e_trs[i]
                 e_tds = e_tr.find_all('td')
                 title = title_type1[len(e_tds)]
                 row = [e_td.get_text(strip=True) for e_td in e_tds]
 
                 detail = dict(zip(title,row))
-                detail.update(d)
+                if extra_data:
+                    d0 = {key:d[key][i] for key in d}
+                    detail.update(d0)
                 content_detail = {'addition':{}}
                 for key in detail:
                     if key in needed_data:
