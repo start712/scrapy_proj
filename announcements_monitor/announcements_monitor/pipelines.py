@@ -15,6 +15,7 @@ import json
 import copy
 import traceback
 
+
 log_path = r'%s/log/pipelines_error(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
 
 sys.path.append(sys.prefix + "\\Lib\\MyWheels")
@@ -135,6 +136,8 @@ class AnnouncementsMonitorPipeline(object):
     def _handle_error(self, failue, item, spider):
         print failue
 
+if __name__ == '__main__':
+    pass
 
 """
 item['parcel_name'] = ''
