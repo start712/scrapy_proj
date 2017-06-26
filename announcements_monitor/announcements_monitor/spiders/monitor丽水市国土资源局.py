@@ -9,9 +9,6 @@
 """
 import sys
 import os
-
-import numpy as np
-import pandas as pd
 import scrapy
 import announcements_monitor.items
 import re
@@ -22,21 +19,13 @@ import json
 log_path = r'%s/log/spider_DEBUG(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
 
 sys.path.append(sys.prefix + "\\Lib\\MyWheels")
+sys.path.append(os.getcwd())
 reload(sys)
 sys.setdefaultencoding('utf8')
-import set_log  # log_obj.debug(文本)  "\x1B[1;32;41m (文本)\x1B[0m"
-import csv_report
+import spider_log  ########
 
-log_obj = set_log.Logger(log_path, set_log.logging.WARNING,
-                         set_log.logging.DEBUG)
-log_obj.cleanup(log_path, if_cleanup=False)  # 是否需要在每次运行程序前清空Log文件
-csv_report = csv_report.csv_report()
+log_obj = spider_log.spider_log() #########
 
-"""
-bs = bs4.BeautifulSoup(s,'html.parser')
-e_trs = bs.find_all('tr')
-e_trs[0].get_text()
-"""
 with open(os.getcwd() + r'\announcements_monitor\spiders\needed_data.txt', 'r') as f:
     s = f.read()
     needed_data = s.split(',')
@@ -89,7 +78,7 @@ class Spider(scrapy.Spider):
 
                 yield scrapy.Request(item['monitor_url'], meta={'item': item}, callback=self.parse1, dont_filter=True)
             except:
-                log_obj.error(u"%s中无法解析%s\n原因：%s" %(self.name, e_tr, traceback.format_exc()))
+                log_obj.update_error("%s中无法解析%s\n原因：%s" %(self.name, e_tr, traceback.format_exc()))
 
     def parse1(self, response):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
@@ -137,7 +126,7 @@ class Spider(scrapy.Spider):
                 item['content_detail'] = content_detail
                 yield item
         except:
-            log_obj.error("%s（%s）中无法解析\n%s" %(self.name, response.url, traceback.format_exc()))
+            log_obj.error(item['monitor_url'], "%s（%s）中无法解析\n%s" %(self.name, response.url, traceback.format_exc()))
             yield response.meta['item']
 
 if __name__ == '__main__':

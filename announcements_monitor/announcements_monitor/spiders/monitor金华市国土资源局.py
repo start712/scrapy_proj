@@ -19,24 +19,15 @@ import traceback
 import datetime
 import bs4
 import json
-log_path = r'%s/log/spider_DEBUG(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
 
 sys.path.append(sys.prefix + "\\Lib\\MyWheels")
+sys.path.append(os.getcwd()) #########
 reload(sys)
 sys.setdefaultencoding('utf8')
-import set_log  # log_obj.debug(文本)  "\x1B[1;32;41m (文本)\x1B[0m"
-import csv_report
+import spider_log  ########
 
-log_obj = set_log.Logger(log_path, set_log.logging.WARNING,
-                         set_log.logging.DEBUG)
-log_obj.cleanup(log_path, if_cleanup=False)  # 是否需要在每次运行程序前清空Log文件
-csv_report = csv_report.csv_report()
+log_obj = spider_log.spider_log() #########
 
-"""
-bs = bs4.BeautifulSoup(s,'html.parser')
-e_trs = bs.find_all('tr')
-e_trs[0].get_text()
-"""
 needed_data = ['parcel_no', 'parcel_location', 'offer_area_m2', 'purpose', 'plot_ratio', 'starting_price_sum', 'starting_price']
 title_type1 = [[u'\n\n\n序号\n\n\n\n\n土地位置\n\n\n\n\n土地面积（m2）\n\n\n\n\n土地 用途\n\n\n\n\n规划指标要求\n\n\n\n\n出让年限（年）\n\n\n\n\n起始（叫）价(元/ m2)\n\n\n\n\n竞买保证金(万元)\n\n\n',
                u'\n\n\n容积率\n\n\n\n\n建筑密度\n\n\n\n\n绿地率\n\n\n\n\n建筑限高（米）\n\n\n'],
@@ -74,7 +65,7 @@ class Spider(scrapy.Spider):
 
                 yield item
             except:
-                log_obj.error(u"%s中无法解析\n原因：%s" %(self.name, traceback.format_exc()))
+                log_obj.update_error("%s中无法解析\n原因：%s" %(self.name, traceback.format_exc()))
 
     def parse1(self, response):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
@@ -86,7 +77,6 @@ class Spider(scrapy.Spider):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
         item['parcel_status'] = 'sold'
-
 
 if __name__ == '__main__':
     pass

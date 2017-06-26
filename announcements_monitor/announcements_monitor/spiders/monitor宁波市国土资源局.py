@@ -15,18 +15,15 @@ import scrapy
 import announcements_monitor.items
 import re
 import datetime
-log_path = r'%s/log/spider_DEBUG(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
 
 sys.path.append(sys.prefix + "\\Lib\\MyWheels")
+sys.path.append(os.getcwd()) #########
 reload(sys)
 sys.setdefaultencoding('utf8')
-import set_log  # log_obj.debug(文本)  "\x1B[1;32;41m (文本)\x1B[0m"
-import csv_report
+import spider_log  ########
 
-log_obj = set_log.Logger(log_path, set_log.logging.WARNING,
-                         set_log.logging.DEBUG)
-log_obj.cleanup(log_path, if_cleanup=False)  # 是否需要在每次运行程序前清空Log文件
-csv_report = csv_report.csv_report()
+log_obj = spider_log.spider_log() #########
+
 # 对应于数据库中字段名的标题
 needed_item = ['parcel_no', 'offer_area_m2', 'purpose', 'plot_ratio', 'starting_price_sum', 'parcel_location',
                'starting_price', 'starting_price_sum', 'parcel_name', 'floor_starting_price', 'transaction_price_sum',
@@ -123,7 +120,7 @@ class Spider(scrapy.Spider):
                     yield item
                 yield scrapy.Request(url=item['monitor_url'], meta={'item': item}, callback=self.parse0, dont_filter=True)
             except:
-                log_obj.debug("%s中存在无法解析的xpath：%s\n原因：%s" %(self.name, site, traceback.format_exc()))
+                log_obj.update_error("%s中存在无法解析的xpath：%s\n原因：%s" %(self.name, site, traceback.format_exc()))
 
 
     def parse0(self, response):
@@ -138,7 +135,7 @@ class Spider(scrapy.Spider):
 
         # 若标题行数标记为0，则说明有多种网页形式
         if not title_row_count:
-            yield response.meta['item']
+            raise
 
         try:
             sites = sites.find_all('tr')
@@ -164,7 +161,7 @@ class Spider(scrapy.Spider):
                 item['content_detail'] = content_detail
                 yield item
             except:
-                log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
+                log_obj.error(item['monitor_url'], "%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
                 yield response.meta['item']
 
 if __name__ == '__main__':

@@ -18,18 +18,14 @@ import announcements_monitor.items
 import re
 import datetime
 import pandas as pd
-log_path = r'%s/log/spider_DEBUG(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
 
 sys.path.append(sys.prefix + "\\Lib\\MyWheels")
+sys.path.append(os.getcwd()) #########
 reload(sys)
 sys.setdefaultencoding('utf8')
-import set_log  # log_obj.debug(文本)  "\x1B[1;32;41m (文本)\x1B[0m"
-import csv_report
+import spider_log  ########
 
-log_obj = set_log.Logger(log_path, set_log.logging.WARNING,
-                         set_log.logging.DEBUG)
-log_obj.cleanup(log_path, if_cleanup=False)  # 是否需要在每次运行程序前清空Log文件
-csv_report = csv_report.csv_report()
+log_obj = spider_log.spider_log() #########
 
 key_dict = {
     u'宗地坐落':'parcel_location',
@@ -71,18 +67,18 @@ class Spider(scrapy.Spider):
                     item['monitor_url'] = root_site + re.search(r"(?<=href=').*?(?=' class)", row).group(0) # 链接
                     item['monitor_content'] = ""
 
+                    if re.search(r'.*公告.*', item['monitor_title'].encode('utf8')):
+                        item['monitor_re'] = r'.*公告.*'
+                        yield scrapy.Request(url=item['monitor_url'], meta={'item': item}, callback=self.parse1,
+                                             dont_filter=False)
+                    elif re.search(r'.*公示.*', item['monitor_title'].encode('utf8')):
+                        item['monitor_re'] = r'.*公示.*'
+                        yield scrapy.Request(url=item['monitor_url'], meta={'item': item}, callback=self.parse2,
+                                             dont_filter=False)
+                    else:
+                        yield item
                 except:
-                    info = sys.exc_info()
-                    log_obj.debug(u"%s中存在无法解析的xpath：%s\n原因：%s%s%s" %(self.name, row, info[0], ":", info[1]))
-
-                if re.search(r'.*公告.*', item['monitor_title'].encode('utf8')):
-                    item['monitor_re'] = r'.*公告.*'
-                    yield scrapy.Request(url=item['monitor_url'], meta={'item': item}, callback=self.parse1, dont_filter=False)
-                elif re.search(r'.*公示.*', item['monitor_title'].encode('utf8')):
-                    item['monitor_re'] = r'.*公示.*'
-                    yield scrapy.Request(url=item['monitor_url'], meta={'item': item}, callback=self.parse2, dont_filter=False)
-                else:
-                    yield item
+                    log_obj.update_error("%s中无法解析%s\n原因：%s" % (self.name, e_tr, traceback.format_exc()))
 
     def parse1(self, response):
         """关键词：.*公告.*"""
@@ -99,7 +95,7 @@ class Spider(scrapy.Spider):
                 content_detail = {'addition':{}}
                 
                 if not site:
-                    log_obj.debug(u"%s(%s)没有检测到更多detail" %(self.name, response.url))
+                    log_obj.update_debug(u"%s(%s)没有检测到更多detail" %(self.name, response.url))
                     
                 data_frame = pd.read_html(str(site), encoding='utf8')[0] #1
                 data_frame = data_frame.fillna('') # 替换缺失值
@@ -122,7 +118,7 @@ class Spider(scrapy.Spider):
                 item['content_detail'] = content_detail
                 yield item
         except:
-            log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, item['monitor_title'], traceback.format_exc().decode('gbk').encode('utf8')))
+            log_obj.error(item['monitor_url'], "%s（%s）中无法解析\n%s" %(self.name, response.url, traceback.format_exc().decode('gbk').encode('utf8')))
             yield response.meta['item']
 
     def parse2(self, response):
@@ -130,11 +126,7 @@ class Spider(scrapy.Spider):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
         item['parcel_status'] = 'sold'
-            
         site = bs_obj.find('table', style='border-collapse:collapse; border-color:#333333; font-size:12px;')
-        if not site:
-            log_obj.debug(u"%s(%s)没有检测到更多detail" % (self.name, response.url))
-
         parcel_data = []
         try:
             data_frame = pd.read_html(str(site), encoding='utf8')[0] #2
@@ -169,7 +161,7 @@ class Spider(scrapy.Spider):
                 item['content_detail'] = content_detail
                 yield item
         except:
-            log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, item['monitor_title'], traceback.format_exc().decode('gbk').encode('utf8')))
+            log_obj.error(item['monitor_url'], "%s（%s）中无法解析\n%s" %(self.name, response.url, traceback.format_exc().decode('gbk').encode('utf8')))
             yield response.meta['item']
 
 if __name__ == '__main__':

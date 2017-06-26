@@ -15,21 +15,14 @@ import scrapy
 import announcements_monitor.items
 import re
 import datetime
-import requests
-log_path = r'%s/log/spider_DEBUG(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
 
 sys.path.append(sys.prefix + "\\Lib\\MyWheels")
+sys.path.append(os.getcwd()) #########
 reload(sys)
 sys.setdefaultencoding('utf8')
-import set_log  # log_obj.debug(文本)  "\x1B[1;32;41m (文本)\x1B[0m"
-import csv_report
+import spider_log  ########
 
-log_obj = set_log.Logger(log_path, set_log.logging.WARNING,
-                         set_log.logging.DEBUG)
-log_obj.cleanup(log_path, if_cleanup=False)  # 是否需要在每次运行程序前清空Log文件
-csv_report = csv_report.csv_report()
-
-
+log_obj = spider_log.spider_log() #########
 
 class Spider(scrapy.Spider):
     name = "511704"
@@ -75,7 +68,7 @@ class Spider(scrapy.Spider):
                 else:
                     yield item
             except:
-                log_obj.debug("%s中存在无法解析的xpath：%s\n原因：%s" %(self.name, site, traceback.format_exc()))
+                log_obj.update_error("%s中无法解析\n原因：%s" %(self.name, traceback.format_exc()))
 
     def parse1(self, response):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
@@ -83,11 +76,10 @@ class Spider(scrapy.Spider):
         item['parcel_status'] = 'onsell'
         #item['content_html'] = bs_obj.prettify()
         sites = bs_obj.find("table", class_="MsoNormalTable").find_all('tr', style = 'height:114.7500pt;')
-        if not sites:
-            log_obj.debug(u"%s(%s)没有检测到更多detail" %(self.name, response.url))
-        for i in xrange(len(sites)):
-            site = sites[i].find_all('td')
-            try:
+
+        try:
+            for i in xrange(len(sites)):
+                site = sites[i].find_all('td')
                 content_detail =\
                             {'parcel_no': site[0].get_text(strip=True),
                              'parcel_location': site[1].get_text(strip=True),
@@ -99,9 +91,9 @@ class Spider(scrapy.Spider):
                 print content_detail
                 item['content_detail'] = content_detail
                 yield item
-            except:
-                log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
-                yield response.meta['item']
+        except:
+            log_obj.error(item['monitor_url'], "%s（%s）中无法解析\n%s" %(self.name, response.url, traceback.format_exc()))
+            yield response.meta['item']
 
     def parse2(self, response):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
@@ -111,12 +103,10 @@ class Spider(scrapy.Spider):
         sites = bs_obj.find("table", class_="MsoNormalTable").find_all('tr')
         # 去掉标题
         sites = [site.find_all('td') for site in sites if sites.index(site) >= 1] #标题高度
-        if not sites:
-            log_obj.debug(u"%s(%s)没有检测到更多detail" %(self.name, response.url))
 
-        for i in xrange(len(sites)):
-            site = sites[i]
-            try:
+        try:
+            for i in xrange(len(sites)):
+                site = sites[i]
                 content_detail =\
                             {'parcel_no': site[0].get_text(strip=True),
                             'parcel_location': site[1].get_text(strip=True),
@@ -127,9 +117,9 @@ class Spider(scrapy.Spider):
 
                 item['content_detail'] = content_detail
                 yield item
-            except:
-                log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
-                yield response.meta['item']
+        except:
+            log_obj.error(item['monitor_url'], "%s（%s）中无法解析\n%s" %(self.name, response.url, traceback.format_exc()))
+            yield response.meta['item']
 
 if __name__ == '__main__':
     pass

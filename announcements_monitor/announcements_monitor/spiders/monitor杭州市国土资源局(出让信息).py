@@ -19,18 +19,14 @@ import traceback
 import datetime
 import bs4
 import json
-log_path = r'%s/log/spider_DEBUG(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
 
 sys.path.append(sys.prefix + "\\Lib\\MyWheels")
+sys.path.append(os.getcwd()) #########
 reload(sys)
 sys.setdefaultencoding('utf8')
-import set_log  # log_obj.debug(文本)  "\x1B[1;32;41m (文本)\x1B[0m"
-import csv_report
+import spider_log  ########
 
-log_obj = set_log.Logger(log_path, set_log.logging.WARNING,
-                         set_log.logging.DEBUG)
-log_obj.cleanup(log_path, if_cleanup=False)  # 是否需要在每次运行程序前清空Log文件
-csv_report = csv_report.csv_report()
+log_obj = spider_log.spider_log() #########
 
 class Spider(scrapy.Spider):
     name = "511703" #出让信息
@@ -60,19 +56,19 @@ class Spider(scrapy.Spider):
                 item['monitor_date'] = re.sub(r"[ \s]", "", site.xpath('td[3]/text()').extract_first()) # 成交日期 site.xpath('td[3]/text()').extract_first()
                 item['monitor_url'] = "http://www.hzgtj.gov.cn" + site.xpath('td[2]/a/@href').extract_first() # 链接
 
-            except:
-                info = sys.exc_info()
-                log_obj.debug(u"%s中无法解析%s\n原因：%s%s%s" %(self.name, site, info[0], ":", info[1]))
 
-            #log_obj.debug("!!!!item['monitor_title']:%s" % type(item['monitor_title']))
-            if re.match(r'杭政工出.*', item['monitor_title'].encode('utf8')):
-                item['monitor_re'] = r'杭政工出.*'
-                yield scrapy.Request(url=item['monitor_url'],meta={'item':item},callback=self.parse1, dont_filter=False)
-            elif re.match(r'杭政储出.*', item['monitor_title'].encode('utf8')):
-                item['monitor_re'] = r'杭政储出.*'
-                yield scrapy.Request(item['monitor_url'],meta={'item':item},callback=self.parse2, dont_filter=False)
-            else:
-                yield item
+                if re.match(r'杭政工出.*', item['monitor_title'].encode('utf8')):
+                    item['monitor_re'] = r'杭政工出.*'
+                    yield scrapy.Request(url=item['monitor_url'], meta={'item': item}, callback=self.parse1,
+                                         dont_filter=False)
+                elif re.match(r'杭政储出.*', item['monitor_title'].encode('utf8')):
+                    item['monitor_re'] = r'杭政储出.*'
+                    yield scrapy.Request(item['monitor_url'], meta={'item': item}, callback=self.parse2,
+                                         dont_filter=False)
+                else:
+                    yield item
+            except:
+                log_obj.update_error("%s中无法解析\n原因：%s" %(self.name, traceback.format_exc()))
 
     def parse1(self, response):
         """关键词：杭政工出"""
@@ -82,12 +78,10 @@ class Spider(scrapy.Spider):
         #item['content_html'] = bs_obj.prettify()
         sites = bs_obj.find_all('tr')
         sites = [site.find_all('td') for site in sites if site.b == None and sites.index(site)>=1]  # [@id="list"] [@class="padding10"][position()>1]
-        if not sites:
-            log_obj.debug(u"%s(%s)没有检测到更多detail" %(self.name, response.url))
 
-        for i in xrange(len(sites)):
-            site = sites[i]
-            try:
+        try:
+            for i in xrange(len(sites)):
+                site = sites[i]
                 content_detail =\
                             {'parcel_no': site[0].get_text(strip=True),
                             'parcel_location': site[1].get_text(strip=True),
@@ -113,9 +107,9 @@ class Spider(scrapy.Spider):
 
                 item['content_detail'] = content_detail
                 yield item
-            except:
-                log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
-                yield response.meta['item']
+        except:
+            log_obj.error(item['monitor_url'], "%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
+            yield response.meta['item']
 
     def parse2(self, response):
         """关键词：杭政储出"""
@@ -125,19 +119,17 @@ class Spider(scrapy.Spider):
         #item['content_html'] = bs_obj.prettify()
         sites = bs_obj.find_all('tr')
         sites = [site.find_all('td') for site in sites if site.b == None and sites.index(site)>=1]  # [@id="list"] [@class="padding10"][position()>1]
-        if not sites:
-            log_obj.debug(u"%s(%s)没有检测到更多detail" %(self.name, response.url))
 
-        # 有合并单元格的现象
-        cell_len = [len(site) for site in sites]
-        l0 = [num - max(cell_len) for num in cell_len]
-        normal_row = [i for i in xrange(len(l0)) if l0[i] == 0] # 找出哪几行是正常行
-        short_len = map(lambda x:x[0]-x[1]-1, zip(normal_row[1:],normal_row[:-1])) # 一列中相邻两数相减
-        short_len.append(0) #让这个列表的长度与normal_row一样
+        try:
+            # 有合并单元格的现象
+            cell_len = [len(site) for site in sites]
+            l0 = [num - max(cell_len) for num in cell_len]
+            normal_row = [i for i in xrange(len(l0)) if l0[i] == 0] # 找出哪几行是正常行
+            short_len = map(lambda x:x[0]-x[1]-1, zip(normal_row[1:],normal_row[:-1])) # 一列中相邻两数相减
+            short_len.append(0) #让这个列表的长度与normal_row一样
 
-        for i in normal_row:
-            site = sites[i]
-            try:
+            for i in normal_row:
+                site = sites[i]
                 content_detail =\
                             {'parcel_no': site[0].get_text(strip=True),
                             'parcel_location': site[1].get_text(strip=True),
@@ -183,9 +175,9 @@ class Spider(scrapy.Spider):
 
                 item['content_detail'] = content_detail
                 yield item
-            except:
-                log_obj.error("%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
-                yield response.meta['item']
+        except:
+            log_obj.error(item['monitor_url'], "%s（%s）中无法解析\n%s" %(self.name, response.url, traceback.format_exc()))
+            yield response.meta['item']
 
 if __name__ == '__main__':
     pass
