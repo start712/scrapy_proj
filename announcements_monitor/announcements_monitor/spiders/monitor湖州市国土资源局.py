@@ -75,10 +75,12 @@ class Spider(scrapy.Spider):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
         item['parcel_status'] = 'onsell'
-        e_table = bs_obj.find("table", style="width:626px")
+        e_table = bs_obj.table
+        while e_table.table:
+            e_table = e_table.table
 
         try:
-            for e_tr in e_table.find_all('tr', style='height:152px'):
+            for e_tr in e_table.find_all('tr')[2:]:
                 e_tds = e_tr.find_all('td')
                 content_detail = {
                     'parcel_no':e_tds[0].get_text(strip=True),

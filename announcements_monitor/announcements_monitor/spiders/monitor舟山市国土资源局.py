@@ -137,7 +137,7 @@ class Spider(scrapy.Spider):
             else:
                 test_row = e_trs[-1].find_all('td')
                 if len(test_row) not in title_type:
-                    log_obj.update_debug("%s（%s）中存在不规则数据，标题列数为%s，数据列数为%s\n"
+                    log_obj.error(item['monitor_url'], "%s（%s）中存在不规则数据，标题列数为%s，数据列数为%s\n"
                                          "标题列：%s\n数据列：%s" % (self.name, response.url, len(title_row),
                                                             len(test_row), ','.join([e_td.get_text(strip=True) for e_td in title_row]),
                                                             ','.join([e_td.get_text(strip=True) for e_td in test_row])))
@@ -208,7 +208,7 @@ class Spider(scrapy.Spider):
 
                 if len(title_new) != len(row):
                     if len(row) > 2 and ''.join(row) and not re.search(ur'舟山市国土资源局.+分局|^\d+年\d+月\d+日',''.join(row)):
-                        log_obj.update_debug("%s（%s）中存在不规则数据，标题列数为%s，数据列数为%s\n标题列：%s\n数据列：%s" % (self.name,
+                        log_obj.error(item['monitor_url'], "%s（%s）中存在不规则数据，标题列数为%s，数据列数为%s\n标题列：%s\n数据列：%s" % (self.name,
                                       response.url, len(title_new), len(row), ','.join(title_new), ','.join(row)))
                         yield response.meta['item']
                 else:

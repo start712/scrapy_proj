@@ -42,6 +42,12 @@ title_type3 = [[u'\n\n编号\n\n\n界址（空间范围）\n\n\n土地\n面积 (
                ['parcel_no', 'parcel_location', 'offer_area_m2', 'purpose', 'plot_ratio', '建筑密度',
                 '出让年限', 'starting_price_sum', '保证金']]
 
+title_type4 = [[u'\n\n编号\n\n\n土地位置\n\n\n土地\n面积 (m2)\n\n\n用途\n\n\n规划指标\n\n\n出让年限年\n\n\n挂牌起始价(元/M2)\n\n\n保证金(人民币万元)\n\n',
+                 u'\n\n容积率\n\n\n建筑密度\n\n'],
+                ['parcel_no', 'parcel_location', 'offer_area_m2', 'purpose', 'plot_ratio', '建筑密度',
+                '出让年限', 'starting_price_sum', '保证金']]
+
+
 class Spider(scrapy.Spider):
     name = "511708"
 
@@ -94,6 +100,8 @@ class Spider(scrapy.Spider):
                     title = title_type2[1]
                 elif title == title_type3[0]:
                     title = title_type3[1]
+                elif title == title_type4[0]:
+                    title = title_type4[1]
                 else:
                     raise
 
