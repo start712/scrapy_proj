@@ -94,6 +94,9 @@ class controller(object):
         print u"爬取结束！！！！！"
         print u"爬取结束！！！！！"
 
+        while True:
+            print u"\n闲置中............\n"
+            time.sleep(3600)
 
     def timer(self):
         while True:

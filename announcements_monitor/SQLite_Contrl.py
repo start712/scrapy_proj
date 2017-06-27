@@ -116,8 +116,8 @@ if __name__ == '__main__':
     #print command.connect("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
     #print command.insert_url('wtf222')
     #print command.updat e_status('wtf')
-    #command.show_url()
-    #command.delete_all()
+    command.show_url()
+    command.delete_all()
     #command.from_mysql()
     #command.to_mysql()
     #while True:
