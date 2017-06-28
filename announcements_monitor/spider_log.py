@@ -34,6 +34,7 @@ class spider_log(object):
             print url, u'已经存在于网址数据库SQLite中'
         else:
             com.insert_url(url)
+            log_obj.error(s)
 
     def update_error(self, s):
         log_obj.error(s)

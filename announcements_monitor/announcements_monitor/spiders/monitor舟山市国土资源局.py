@@ -49,6 +49,7 @@ title_match = {
     u'容积率': 'plot_ratio',
     u'起始价': 'starting_price_sum',
     u'编号': 'parcel_no',
+    '编号': 'parcel_no',
 }
 title_type = {
     14:['编号', 'parcel_location', '土地总面积', 'offer_area_m2', '退让面积', 'purpose', 'starting_price_sum',
@@ -215,11 +216,12 @@ class Spider(scrapy.Spider):
                     detail = dict(zip(title_new,row))
 
                     content_detail = {'addition':{}}
-                    for key in detail:
+                    for key0 in detail:
+                        key = re.sub(r'\s+', '', key0)
                         if key in title_match:
-                            content_detail[title_match[key]] = detail[key]
+                            content_detail[title_match[key]] = detail[key0]
                         else:
-                            content_detail['addition'][key] = detail[key]
+                            content_detail['addition'][key] = detail[key0]
 
                     # 规范输出的地块编号
                     if parcel_no:
@@ -228,11 +230,13 @@ class Spider(scrapy.Spider):
 
                         content_detail['parcel_no'] = parcel_no
 
+                    """
                     if 'parcel_no' in content_detail:
                         m0 = re.search(ur'.土公示.+?号', content_detail['parcel_no'])
                         if not m0:
                             content_detail['addition']['地块编号（副）'] = content_detail['parcel_no']
                             content_detail['parcel_no'] = ''
+                    """
 
                     item['content_detail'] = content_detail
                     yield item

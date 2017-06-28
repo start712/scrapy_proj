@@ -27,9 +27,9 @@ import spider_log  ########
 
 log_obj = spider_log.spider_log() #########
 
-replacement = {u'地块 名称':'parcel_no',
-               u'土地 用途':'purpose',
-               u'土地 面积（㎡）':'offer_area_m2',
+replacement = {u'地块名称':'parcel_no',
+               u'土地用途':'purpose',
+               u'土地面积（㎡）':'offer_area_m2',
                u'容积率':'plot_ratio',
                u'土地座落':'parcel_location',
                u'建筑面积（㎡）':'building_area',
@@ -61,7 +61,7 @@ class Spider(scrapy.Spider):
                 item['monitor_date'] = e_tds[2].get_text(strip=True) # 发布日期
                 item['monitor_url'] = 'http://www.sxztb.gov.cn' + e_tds[1].a.get('href') # 链接
 
-                if re.search(ur'绍兴市国土资源局国有建设用地使用权.*', item['monitor_title']):
+                if re.search(ur'绍兴市国土资源局国有建设用地使用权.*|绍兴市国土资源局上虞区分局国有建设用地使用权出让公告.*', item['monitor_title']):
                     item['monitor_re'] = '绍兴市国土资源局国有建设用地使用权.*'
                     yield scrapy.Request(url=item['monitor_url'], meta={'item': item}, callback=self.parse1, dont_filter=True)
                 elif response.url == self.url2:
@@ -78,16 +78,18 @@ class Spider(scrapy.Spider):
         e_table = bs_obj.find("table", class_="MsoNormalTable")
         df = ''
         try:
-            df = pd.read_html(str(e_table), encoding='utf8')[0]
+            # 先读取成为dataframe，然后转换成dict
+            df = pd.read_html(e_table.prettify(encoding='utf8'), encoding='utf8')[0]
             df = pd.DataFrame(np.array(df.loc[1:,:]), columns=list(df.loc[0]))
             for i in xrange(len(df.index)):
                 content_detail = {'addition':{}}
                 d = dict(zip(df.columns, np.array(df.loc[i, :]).tolist()))
+                d = {re.sub(r'\s+','',key):re.sub(ur'\s+', '', d[key]) for key in d}
                 for key in d:
                     if key in replacement:
-                        content_detail[replacement[key]] = re.sub(ur'\s+', '', d[key])
+                        content_detail[replacement[key]] = d[key]
                     else:
-                        content_detail['addition'][re.sub(ur'\s+', '', key)] = re.sub(ur'\s+', '', d[key])
+                        content_detail['addition'][key] = d[key]
                 if 'building_area' in content_detail:
                     content_detail['building_area'] = re.split(ur'～|-',content_detail['building_area'])[-1]
                 item['content_detail'] = content_detail
@@ -105,7 +107,7 @@ class Spider(scrapy.Spider):
             e_table = e_page.find('table', class_='MsoNormalTable')
             e_trs = e_table.find_all('tr')[1:]
             for e_tr in e_trs:
-                e_tds = e_tr.find_all('td')[1:]
+                e_tds = e_tr.find_all('td')
                 content_detail = {
                     'parcel_no':e_tds[0].get_text(strip=True),
                     'offer_area_m2':e_tds[1].get_text(strip=True),

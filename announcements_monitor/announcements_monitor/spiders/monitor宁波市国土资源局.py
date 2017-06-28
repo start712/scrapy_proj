@@ -48,21 +48,21 @@ title_structure = {
                   'starting_price_sum', 'plot_ratio', '建筑密度（%）', '绿地率（%）', '建筑限高（米）'], ['序号',]],
         '北仑':[2, ['序号', 'parcel_no', 'parcel_location', 'purpose', 'offer_area_m2', 'plot_ratio',
                   '绿地率（%）', '建筑密度（%）', '建筑高度(米)', '出让年限（年）', '保证金（万元）', 'floor_starting_price'], ['序号',]],
-        '象山':[0], # 表示需要单独设置一个解析方法
+        '象山':[0,[],[]], # 表示需要单独设置一个解析方法
         '鄞州':[1, ['parcel_no', 'parcel_name', 'offer_area_m2', 'purpose', '建筑密度', 'plot_ratio', '绿地率',
                   '建筑高度', '出让年限（年）', '竞买保证金(万元)', 'floor_starting_price'], ['序号',]],
         '保税区':[2, ['序号', 'parcel_name', 'offer_area_m2', 'purpose', 'purpose', '绿地率', '建筑系数',
                    '限高（m）', '出让年限', '投资强度(万元/亩）', '竞买保证金（万元）', 'starting_price_sum'], []],
         '镇海':[1, ['parcel_name', 'parcel_location', 'offer_area_m2', 'purpose', '出让年限', '建筑密度',
                   'plot_ratio', '建筑高度', '绿地率'], []],
-        '宁海':[0], # 表示需要单独设置一个解析方法
+        '宁海':[0,[],[]], # 表示需要单独设置一个解析方法
     },
     '出让结果公告':{
         '市局':[1, ['序号', 'parcel_name', 'parcel_location', 'offer_area_m2', 'purpose', '土地级别', 'plot_ratio',
                   '出让年限（年）', '供地方式', 'competitive_person', 'transaction_price_sum', '确认时间'], ['序号',]],
         '北仑':[1, ['序号', 'parcel_no', 'competitive_person', 'offer_area_m2', 'plot_ratio', 'purpose', '使用年限',
                   'floor_transaction_price', '竞得时间', '备注'], ['序号', ]],
-        '象山':[0],
+        '象山':[0,[],[]],
         '慈溪':[2, ['序号', 'parcel_no', 'offer_area_m2', 'purpose', 'plot_ratio', '建筑密度(%)', '绿地率(%)', '绿地率(%)',
                   'starting_price_sum', 'transaction_price_sum', '成交日期', 'competitive_person'], ['序号', ]],
         '奉化':[1, ['parcel_no', 'transaction_price_sum', 'competitive_person', '出让方式', '出让日期', 'offer_area_m2',
@@ -75,8 +75,8 @@ title_structure = {
                   '出让年限（年）', '供地方式', 'competitive_person', 'floor_transaction_price', '成交时间'], ['序号',]],
         '保税区':[1, ['地块编号', 'parcel_location', '土地面积(公顷)', 'purpose', '出让年限', 'transaction_price_sum',
                    'competitive_person'], []],
-        '宁海':[0],
-        '江北':[0]
+        '宁海':[0,[],[]],
+        '江北':[0,[],[]]
     }
 }
 
@@ -129,27 +129,21 @@ class Spider(scrapy.Spider):
         item = response.meta['item']
         area = item["monitor_content"]
 
-        title_row_count, titles, title_bans= title_structure[status[item['parcel_status']]][area]
-        #item['content_html'] = bs_obj.prettify()
-        sites = bs_obj.find("table", style="HEIGHT: 459px; WIDTH: 862px; BORDER-COLLAPSE: collapse")
-
-        # 若标题行数标记为0，则说明有多种网页形式
-        if not title_row_count:
-            raise
-
         try:
+            title_row_count, titles, title_bans= title_structure[status[item['parcel_status']]][area]
+            #item['content_html'] = bs_obj.prettify()
+            sites = bs_obj.find("table", id='table125').table
+
+            # 若标题行数标记为0，则说明有多种网页形式
+            if not title_row_count:
+                raise
+
             sites = sites.find_all('tr')
             # 删除标题行
             sites = sites[title_row_count:]
-            if not sites:
-                raise TypeError
-        except:
-            log_obj.debug("%s(%s)检测detail时出现问题，可能是由于网页中不存在表格\n%s " % (self.name, response.url, traceback.format_exc()))
-            yield response.meta['item']
 
-        for i in xrange(len(sites)):
-            site = sites[i].find_all('td')
-            try:
+            for i in xrange(len(sites)):
+                site = sites[i].find_all('td')
                 content_detail = {}
                 for j in xrange(len(titles)):
                     # 去掉一些不需要的标题
@@ -158,11 +152,18 @@ class Spider(scrapy.Spider):
                     # 填入对应标题的数据
                     content_detail[titles[j]] = site[j].get_text(strip=True)
 
+                m = re.search(ur'余?.土[^土]+号', item['monitor_title'])
+                if m:
+                    if 'parcel_no' in content_detail and content_detail['parcel_no']:
+                        content_detail['parcel_no'] = "%s(%s)" %(m.group(), content_detail['parcel_no'])
+                    else:
+                        content_detail['parcel_no'] = m.group()
+
                 item['content_detail'] = content_detail
                 yield item
-            except:
-                log_obj.error(item['monitor_url'], "%s（%s）中无法解析%s\n%s" %(self.name, response.url, site, traceback.format_exc()))
-                yield response.meta['item']
+        except:
+            log_obj.error(item['monitor_url'], "%s（%s）中无法解析\n%s" %(self.name, response.url, traceback.format_exc()))
+            yield response.meta['item']
 
 if __name__ == '__main__':
     pass
