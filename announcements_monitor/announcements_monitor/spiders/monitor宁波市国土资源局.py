@@ -152,12 +152,17 @@ class Spider(scrapy.Spider):
                     # 填入对应标题的数据
                     content_detail[titles[j]] = site[j].get_text(strip=True)
 
+                # 忽略合计行
+                if 'parcel_no' in content_detail and re.sub(r'\s+','',content_detail['parcel_no']) == u'合计':
+                    continue
+
                 m = re.search(ur'余?.土[^土]+号', item['monitor_title'])
                 if m:
                     if 'parcel_no' in content_detail and content_detail['parcel_no']:
-                        content_detail['parcel_no'] = "%s(%s)" %(m.group(), content_detail['parcel_no'])
+                        content_detail['parcel_no'] = re.sub(r'\s+','',"%s(%s)" %(m.group(), content_detail['parcel_no']))
                     else:
-                        content_detail['parcel_no'] = m.group()
+                        content_detail['parcel_no'] = re.sub(r'\s+', '', m.group())
+
 
                 item['content_detail'] = content_detail
                 yield item
