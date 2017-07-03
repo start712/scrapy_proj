@@ -41,6 +41,16 @@ class controller(object):
             spider_id = " " + spider_id
         os.system("scrapy %s" %spider_id)
 
+    def min_run(self):
+        self.initialize()
+
+        # 启动爬虫
+        self.start_spider('monitor')
+
+        print u'爬虫运行完毕'
+
+        self.report()
+
     def main(self):
         print u"""
         您正在使用爬虫控制程序.........
@@ -160,4 +170,4 @@ class controller(object):
 
 if __name__ == '__main__':
     controller = controller()
-    controller.main()
+    controller.min_run()

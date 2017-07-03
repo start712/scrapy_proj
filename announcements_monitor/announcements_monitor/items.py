@@ -11,9 +11,6 @@ sys.path.append(sys.prefix + "\\Lib\\MyWheels")
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-import mysql_connecter
-mysql_connecter = mysql_connecter.mysql_connecter()
-
 class AnnouncementsMonitorItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
