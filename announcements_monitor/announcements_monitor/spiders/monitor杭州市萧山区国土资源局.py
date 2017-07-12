@@ -116,7 +116,7 @@ class Spider(scrapy.Spider):
             for i in xrange(len(sites)):
                 site = sites[i]
                 if len(site) != max_len:
-                    log_obj.update_debug(u"%s(%s)出现不规则数据%s" % (self.name, response.url,[s.get_text(strip=True) for s in site]))
+                    log_obj.update_debug(u"%s{%s}出现不规则数据%s" % (self.name, response.url,[s.get_text(strip=True) for s in site]))
                     continue
                 # 存在http://115.236.5.251/Bulletin/BulletinBrowse.aspx?id=25126中这种变态的表格
                 content_detail =\
@@ -175,7 +175,7 @@ class Spider(scrapy.Spider):
             for i in xrange(len(sites)):
                 site = sites[i]
                 if len(site) != max_len:
-                    log_obj.update_debug(u"%s(%s)出现不规则数据%s" % (self.name, response.url,[s.get_text(strip=True) for s in site]))
+                    log_obj.update_debug(u"%s{%s}出现不规则数据%s" % (self.name, response.url,[s.get_text(strip=True) for s in site]))
                     continue
                 content_detail =\
                             {'parcel_no': site[0].get_text(strip=True),

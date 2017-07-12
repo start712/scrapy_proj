@@ -153,12 +153,12 @@ class Spider(scrapy.Spider):
                 # 短小列的数据加进正常列里，需要根据具体数据格式修改
                 if short_len[normal_row.index(i)] != 0:
                     row_no = i
-                    content_detail['addition']['土地面积情况'] = "%s(%s),%s" %("土地面积",content_detail['purpose'],content_detail['offer_area_m2'])
+                    content_detail['addition']['土地面积情况'] = "%s{%s},%s" %("土地面积",content_detail['purpose'],content_detail['offer_area_m2'])
                     for j in xrange(row_no + 1, row_no + short_len[normal_row.index(i)] + 1):
                         site = sites[j]
                         content_detail['purpose'] = "%s,%s" %(content_detail['purpose'], site[1].get_text(strip=True))
                         content_detail['offer_area_m2'] = float(content_detail['offer_area_m2']) + float(site[0].get_text(strip=True))
-                        content_detail['addition']['土地面积情况'] = content_detail['addition']['土地面积情况'] + "%s(%s),%s" %("土地面积",site[1].get_text(strip=True),site[0].get_text(strip=True))
+                        content_detail['addition']['土地面积情况'] = content_detail['addition']['土地面积情况'] + "%s{%s},%s" %("土地面积",site[1].get_text(strip=True),site[0].get_text(strip=True))
 
                 """
                 # 有一些条目有合并单元格的情况

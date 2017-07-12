@@ -108,7 +108,7 @@ class Spider(scrapy.Spider):
                         content_detail['addition'] = d[key]
 
                 if parcel_no and 'parcel_no' in content_detail and not re.search(ur'.市[^市]+?号', content_detail['parcel_no']):
-                    content_detail['parcel_no'] = "%s(%s)" %(parcel_no, content_detail['parcel_no'])
+                    content_detail['parcel_no'] = "%s{%s}" %(parcel_no, content_detail['parcel_no'])
 
                 item['content_detail'] = content_detail
                 yield item

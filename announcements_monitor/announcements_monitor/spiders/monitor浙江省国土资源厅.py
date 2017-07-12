@@ -91,11 +91,10 @@ class Spider(scrapy.Spider):
             
         try:
             for site in sites:
-                item['parcel_no'] = re.search(r'(?<=\().*(?=\))', item['monitor_title']).group()
                 content_detail = {'addition':{}}
                 
                 if not site:
-                    log_obj.update_debug(u"%s(%s)没有检测到更多detail" %(self.name, response.url))
+                    log_obj.update_debug(u"%s{%s}没有检测到更多detail" %(self.name, response.url))
                     
                 data_frame = pd.read_html(str(site), encoding='utf8')[0] #1
                 data_frame = data_frame.fillna('') # 替换缺失值
@@ -114,6 +113,19 @@ class Spider(scrapy.Spider):
                             content_detail[key_dict[key]] = data_dict[key]
                         else:
                             content_detail['addition'][key] = data_dict[key]
+
+                m = re.search(r'(?<=\().*(?=\))', item['monitor_title'])
+                if m:
+                    item['parcel_no'] = m.group()
+
+                # 统一地块编号
+                if 'parcel_no' in content_detail:
+                    m1 = re.search(ur'.+号', item['parcel_no'])
+                    m2 = re.search(ur'.+号', content_detail['parcel_no'])
+                    if m1 and not m2:
+                        s = '%s{%s}' %(item['parcel_no'], content_detail['parcel_no'])
+                        item['parcel_no'] = s
+                        content_detail['parcel_no'] = s
 
                 item['content_detail'] = content_detail
                 yield item
@@ -147,6 +159,10 @@ class Spider(scrapy.Spider):
                         content_detail[key_dict[key]] = d0[key]
                     else:
                         content_detail['addition'][key] = d0[key]
+
+                if 'parcel_no' in content_detail and re.search(ur'土地使用条件|备注', content_detail['parcel_no']):
+                    continue
+
                 # 若有多行数据，则表示一个地块编号下有多块地，需要在取不同的名字
                 # 另外，网页中表格内的地块编号不对，需要更改
                 if len(arr) == 2:
@@ -154,9 +170,12 @@ class Spider(scrapy.Spider):
                 else:
                     if 'parcel_no' not in content_detail:
                         content_detail['parcel_no'] = '表格中无地块编号'
-                        
-                    item['parcel_no'] = '%s(%s)' %(item['parcel_no'], content_detail['parcel_no'])
-                    content_detail['parcel_no'] = item['parcel_no']
+
+                    if re.search(ur'.+号', content_detail['parcel_no']):
+                        item['parcel_no'] = content_detail['parcel_no']
+                    else:
+                        item['parcel_no'] = '%s{%s}' %(item['parcel_no'], content_detail['parcel_no'])
+                        content_detail['parcel_no'] = item['parcel_no']
 
                 item['content_detail'] = content_detail
                 yield item

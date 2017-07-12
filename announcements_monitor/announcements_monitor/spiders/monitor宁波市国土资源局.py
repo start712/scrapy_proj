@@ -81,9 +81,6 @@ title_structure = {
 }
 
 class Spider(scrapy.Spider):
-    name = "511705"
-    allowed_domains = ["www.yhland.gov.cn"]
-
     def start_requests(self):
         # http://www.nblr.gov.cn/showpage2/pubchief.jsp?type=tdcrgg
         #               http://www.nblr.gov.cn/show3.do?method=getSomeInfo_list&name=gpcrgg&page=
@@ -159,10 +156,13 @@ class Spider(scrapy.Spider):
                 m = re.search(ur'余?.土[^土]+号', item['monitor_title'])
                 if m:
                     if 'parcel_no' in content_detail and content_detail['parcel_no']:
-                        content_detail['parcel_no'] = re.sub(r'\s+','',"%s(%s)" %(m.group(), content_detail['parcel_no']))
+                        content_detail['parcel_no'] = re.sub(r'\s+','',"%s{%s}" %(m.group(), content_detail['parcel_no']))
                     else:
                         content_detail['parcel_no'] = re.sub(r'\s+', '', m.group())
 
+                if 'plot_ratio' in content_detail:
+                    content_detail['addition']['容积率区间'] = re.split(r'[^\d]+', content_detail['plot_ratio'])
+                    content_detail['plot_ratio'] = re.split(r'[^\d]+', content_detail['plot_ratio'])[-1]
 
                 item['content_detail'] = content_detail
                 yield item

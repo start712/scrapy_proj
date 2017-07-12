@@ -97,9 +97,9 @@ class AnnouncementsMonitorPipeline(object):
                 # 对content_detail中增加一些内容便于清洗后的检查工作
                 if "parcel_no" not in item['content_detail']:
                     item['content_detail']["parcel_no"] = item["parcel_no"]
-                item['content_detail']['status'] = item['parcel_status']
-                item['content_detail']['fixture_date'] = item["monitor_date"]
-                item['content_detail']['url'] = item["monitor_url"]
+                #item['content_detail']['status'] = item['parcel_status']
+                #item['content_detail']['fixture_date'] = item["monitor_date"]
+                #item['content_detail']['url'] = item["monitor_url"]
 
             re_type = re.sub('\\pP|\\pS', '', item["monitor_re"])
             if item["parcel_no"]:
