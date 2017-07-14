@@ -17,6 +17,7 @@ import datetime
 import datetime
 
 import MySQLdb
+import pymysql
 import numpy as np
 import pandas as pd
 import time
@@ -32,7 +33,7 @@ mysql_connecter = mysql_connecter.mysql_connecter()
 
 log_obj = set_log.Logger('data_cleaner.log', set_log.logging.WARNING,
                          set_log.logging.DEBUG)
-log_obj.cleanup('data_cleaner.log', if_cleanup=False)  # 是否需要在每次运行程序前清空Log文件
+log_obj.cleanup('data_cleaner.log', if_cleanup=True)  # 是否需要在每次运行程序前清空Log文件
 
 
 class data_cleaner(object):
@@ -117,15 +118,68 @@ class data_cleaner(object):
         return update_data, insert_data
 
     def upload_sql(self, df):
-        with closing(MySQLdb.connect(dbname='raw_data', ip='192.168.1.124', user='spider',
-                                     password='startspider', charset='utf8')) as con:
+        with closing(pymysql.connect(ip='192.168.1.124', user='spider', password='startspider',
+                                     dbname='raw_data',  charset='utf8')) as con:
             df.to_sql('土地信息spider', con, if_exists='append')
 
     def download_sql(self, sql):
-        with closing(MySQLdb.connect(dbname='spider', ip='localhost', user='spider',
-                             password='startspider', charset='utf8')) as con:
+        with closing(pymysql.connect(host='localhost', user='spider',password='startspider',
+                                     database='spider', charset='utf8')) as con:
             df = pd.read_sql(sql, con)
         return df
+
+    def update_sql(self, df):
+        """
+        构造类似的语句
+        UPDATE categories
+            SET display_order = CASE id
+                WHEN 1 THEN 3
+                WHEN 2 THEN 4
+                WHEN 3 THEN 5
+            END,
+            title = CASE id
+                WHEN 1 THEN 'New Title 1'
+                WHEN 2 THEN 'New Title 2'
+                WHEN 3 THEN 'New Title 3'
+            END
+        WHERE id IN (1,2,3)
+        """
+        title = df.columns.tolist()
+
+        l = []
+        for t0 in title:
+            l0 = ['WHEN "%s" THEN "%s"' %(df.loc[i,'parcel_no'],df.loc[i,t0]) for i in df.index]
+            sql0 = \
+                """
+                `%s` = CASE `parcel_no`
+                %s
+                END 
+                """ %(t0, '\n'.join(l))
+            l.append(sql0)
+        sql = \
+            """
+            UPDATE `土地信息spider`
+                SET
+                %s
+            WHERE parcel_no IN (%s)
+            """ %(',\n'.join(l), ','.join(df['parcel_no'].tolist()))
+        #log_obj.update_debug(sql)
+        return sql.encode('utf8')
+
+    def insert_sql(self, df):
+        """
+
+        """
+        title = df.columns.tolist()
+        l = []
+        for i in xrange(len(df.index)):
+            l0 = ['"%s"' %s for s in df.loc[i,:].tolist()]
+            l.append('(%s)' %','.join(l0))
+        sql = "INSERT INTO `土地信息spider`(%s) VALUES(%s)" %(','.join(title), ','.join(l))
+
+        log_obj.update_debug(sql)
+        return sql
+
 
     def main(self):
         onsell_data, sold_data = self.get_data() # 获取待售和已售数据
@@ -135,9 +189,8 @@ class data_cleaner(object):
         # 将数据库中没有的地块添加至insert_data，插入数据库中
         update_data, insert_data = self.data_classify(data)
 
-
-
-
+        update_sql = self.update_sql(update_data)
+        #insert_sql = self.insert_sql(insert_data)
 
 if __name__ == '__main__':
     data_cleaner = data_cleaner()
