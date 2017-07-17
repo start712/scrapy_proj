@@ -117,10 +117,16 @@ class data_cleaner(object):
         insert_data = df[b==False]
         return update_data, insert_data
 
+    def mysql_ctrl(self, sql, args):
+        with closing(pymysql.connect(ip='192.168.1.124', user='spider', password='startspider',
+                                     dbname='raw_data',  charset='utf8')) as conn:
+            with closing(conn.cursor()) as cur:
+                cur.executemany(sql, args)
+
     def upload_sql(self, df):
         with closing(pymysql.connect(ip='192.168.1.124', user='spider', password='startspider',
-                                     dbname='raw_data',  charset='utf8')) as con:
-            df.to_sql('土地信息spider', con, if_exists='append')
+                                     dbname='raw_data',  charset='utf8')) as conn:
+            df.to_sql('土地信息spider', conn, if_exists='append')
 
     def download_sql(self, sql):
         with closing(pymysql.connect(host='localhost', user='spider',password='startspider',
@@ -128,8 +134,11 @@ class data_cleaner(object):
             df = pd.read_sql(sql, con)
         return df
 
-    def update_sql(self, df):
+    def update_sql(self, df, lengh = 6):
         """
+        sql代码太长电脑会卡死，只能分段
+
+
         构造类似的语句
         UPDATE categories
             SET display_order = CASE id
@@ -146,25 +155,26 @@ class data_cleaner(object):
         """
         title = df.columns.tolist()
 
-        l = []
-        for t0 in title:
-            l0 = ['WHEN "%s" THEN "%s"' %(df.loc[i,'parcel_no'],df.loc[i,t0]) for i in df.index]
-            sql0 = \
+        for i in xrange(len(title)/lengh):
+            l = []
+            for t0 in title[i*lengh:(i+1)*lengh]:
+                l0 = ['WHEN "%s" THEN "%s"' %(df.loc[i,'parcel_no'],df.loc[i,t0]) for i in df.index]
+                sql0 = \
+                    """
+                    `%s` = CASE `parcel_no`
+                    %s
+                    END 
+                    """ %(t0, '\n'.join(l))
+                l.append(sql0)
+            sql = \
                 """
-                `%s` = CASE `parcel_no`
-                %s
-                END 
-                """ %(t0, '\n'.join(l))
-            l.append(sql0)
-        sql = \
-            """
-            UPDATE `土地信息spider`
-                SET
-                %s
-            WHERE parcel_no IN (%s)
-            """ %(',\n'.join(l), ','.join(df['parcel_no'].tolist()))
-        #log_obj.update_debug(sql)
-        return sql.encode('utf8')
+                UPDATE `土地信息spider`
+                    SET
+                    %s
+                WHERE parcel_no IN (%s)
+                """ %(',\n'.join(l), ','.join(df['parcel_no'].astype(np.str).tolist()))
+            log_obj.debug(sql)
+            yield sql.encode('utf8')
 
     def insert_sql(self, df):
         """
@@ -177,7 +187,7 @@ class data_cleaner(object):
             l.append('(%s)' %','.join(l0))
         sql = "INSERT INTO `土地信息spider`(%s) VALUES(%s)" %(','.join(title), ','.join(l))
 
-        log_obj.update_debug(sql)
+        log_obj.debug(sql)
         return sql
 
 
@@ -189,8 +199,8 @@ class data_cleaner(object):
         # 将数据库中没有的地块添加至insert_data，插入数据库中
         update_data, insert_data = self.data_classify(data)
 
-        update_sql = self.update_sql(update_data)
-        #insert_sql = self.insert_sql(insert_data)
+        update_sql_l = self.update_sql(update_data) # 生成器
+        insert_sql = self.insert_sql(insert_data)
 
 if __name__ == '__main__':
     data_cleaner = data_cleaner()
