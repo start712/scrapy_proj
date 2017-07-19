@@ -119,13 +119,18 @@ class AnnouncementsMonitorPipeline(object):
     #写入数据库中
     def _conditional_insert(self,tx,item):
         sql = "INSERT INTO monitor(`crawler_id`, `status`, `title`, `city`, `key`, `re`, `fixture_date`, `parcel_no`, `content`, `url`, `detail`) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-        params = (item["monitor_id"], item['parcel_status'], item["monitor_title"], item["monitor_city"], item["monitor_key"], item["monitor_re"], item["monitor_date"], item["parcel_no"],item["monitor_content"], item["monitor_url"], item['content_detail'])
+        params = (item["monitor_id"], item['parcel_status'], item["monitor_title"], item["monitor_city"],
+                  item["monitor_key"], item["monitor_re"], item["monitor_date"], item["parcel_no"],
+                  item["monitor_content"], item["monitor_url"], item['content_detail'])
         try:
             #csv_report.output_data(item, "result", method='a')
             tx.execute(sql,params)
             if params:
                 logger0.info(u"key saved:%s" % item["monitor_key"])
-                csv_report.output_data([params,], "NEW", title=[u'爬虫编号', u'标题', u'主键', u'发布日期', u'链接', u'其他内容'], method = "a")
+                csv_file = r'\log\NEW(%s)' %datetime.datetime.date(datetime.datetime.today())
+                title = (u'地块名称', u'标题', u'城市', u'状态', u'网址')
+                content = (item["parcel_no"], item["monitor_title"], item["monitor_city"], item['parcel_status'], item["monitor_url"])
+                csv_report.output_data([content,], csv_file, title=title, method = "a")
         except MySQLdb.IntegrityError:
             logger0.info(params)
         except:
