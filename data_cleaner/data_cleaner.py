@@ -136,6 +136,7 @@ class data_cleaner(object):
         sql = 'SELECT * FROM `土地信息spider` WHERE `parcel_no` in (%s)' % (
               ','.join(['"%s"' %s for s in df['parcel_no'].astype(np.str).tolist()]))
         data = self.download_sql(sql, '192.168.1.124', 'raw_data')
+        #data.to_csv(os.getcwd() + '\cleaner_log\(3.1)data_sync.csv', encoding='utf_8_sig')
         cols = [s for s in df.columns if s in data.columns]
         print u'data_sync()整理好的数据中的未知字段%s' %[s for s in df.columns if s not in data.columns]
         data = data[cols]
@@ -146,6 +147,10 @@ class data_cleaner(object):
         data = data.append(insert_data)
 
         return data[cols]
+
+    def data_clean(self, df):
+        df['addition'] = df['addition'].apply(lambda x:','.join(map(lambda x0,y0:'%s:%s' %(x0,y0),x.viewkeys(),x.viewvalues()) if isinstance(x,dict) else ''))
+        return df
 
     def mysql_ctrl(self, sql, args=None):
         with closing(pymysql.connect(host='192.168.1.124', user='spider', password='startspider',
@@ -180,7 +185,6 @@ class data_cleaner(object):
         data = np.array(df).astype(str).tolist()
         #pd.DataFrame(arr).to_csv('arr.csv')
         #pd.DataFrame(data).to_csv('df.csv')
-        log_obj.debug(sql)
         return sql
 
     def main(self):
@@ -195,7 +199,11 @@ class data_cleaner(object):
         data = self.data_sync(data)
         data.to_csv(os.getcwd() + '\cleaner_log\(3)data_sync.csv', encoding='utf_8_sig')
 
+        data = self.data_clean(data)
+        data.to_csv(os.getcwd() + '\cleaner_log\(4)data_clean.csv', encoding='utf_8_sig')
+
         sql = self.insert_sql(data)
+        log_obj.debug(sql)
         mysql_connecter.connect(sql, dbname='raw_data', ip='192.168.1.124', user='spider', password='startspider')
         #insert_sql = self.insert_sql(insert_data)
 
