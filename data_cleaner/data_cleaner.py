@@ -38,34 +38,36 @@ log_obj.cleanup('data_cleaner.log', if_cleanup=True)  # 是否需要在每次运
 
 class data_cleaner(object):
     def __init__(self):
-        used_data = []
+        pass
 
     def get_data(self, length = 100):
         """每次只会读取100条数据，若是长时间没有清洗过数据了，需要更改这个数值
            输出结果格式为pd.DataFrame"""
         # 处理挂牌土地数据
-        sql1 = r"SELECT `key`, `detail`, `status`, `fixture_date`, `url` FROM `monitor` WHERE `status` = 'onsell'" # LIMIT %s [length,],
-        data1 = mysql_connecter.connect(sql1, dbname='spider', ip='localhost', user='spider', password='startspider')
+        sql1 = r"SELECT `parcel_no`, `city`, `key`, `detail`, `status`, `fixture_date`, `url` FROM `monitor` WHERE `status` = 'onsell'" # LIMIT %s [length,],
+        data1 = self.download_sql(sql1, 'localhost', 'spider')
         data1 = self.standardizing(data1) # 字典转化为DataFrame # 116.62.230.38
         #data1 = self.duplicate_check(data1) # 去除重复地块
 
         # 同样的方法处理已售数据
-        sql2 = r"SELECT `key`, `detail`, `status`, `fixture_date`, `url` FROM `monitor` WHERE `status` = 'sold'" # LIMIT %s [length,],
-        data2 = mysql_connecter.connect(sql2, dbname='spider', ip='localhost', user='spider', password='startspider')
+        sql2 = r"SELECT `parcel_no`, `city`, `key`, `detail`, `status`, `fixture_date`, `url` FROM `monitor` WHERE `status` = 'sold'" #  %s [length,],
+        data2 = self.download_sql(sql2, 'localhost', 'spider')
         data2 = self.standardizing(data2)
         #data2 = self.duplicate_check(data2)
 
         return data1, data2
 
-    def standardizing(self, data):
+    def standardizing(self, df):
         # 获取数据,将detail中的数据格式转化为json
-        detail = {t[0]: json.loads(t[1]) for t in data}
-        data = {t[0]: {'status':t[2], 'fixture_date':t[3], 'url':t[4]} for t in data}
-        for key in data:
-            data[key].update(detail[key])
-
-        df = pd.DataFrame(data)
-        df = df.stack().swaplevel().unstack() #行列交换，不知道还有没有更好的方法
+        df0 = df.loc[:,'detail']
+        df00 = pd.DataFrame([])
+        df0 = df0.fillna('')
+        for i in df.index:
+            #print df0.loc(axis=0)[i]
+            ser = pd.read_json(df0.loc(axis=0)[i], typ='series')
+            df00 = df00.append(ser, ignore_index=True)
+        df = self.left_join(df, df00, how='left')
+        del df['detail'] # 删除detail字段
 
         # 将parcel_no统一格式
         df['parcel_no'] = [self.clean_parcel_no(s) for s in df['parcel_no'].tolist()]
@@ -78,7 +80,7 @@ class data_cleaner(object):
         if np.any(df.duplicated('parcel_no')):
             file_name = u'重复土地爬虫数据%s.csv' %int(time.time())
             print u'发现重复数据，已经输出为%s' %file_name
-            df[df.duplicated('parcel_no')].to_csv(os.getcwd() + '\\' + file_name)
+            df[df.duplicated('parcel_no')].to_csv(os.getcwd() + '\\cleaner_log\\' + file_name, encoding='utf_8_sig')
             df = df.drop_duplicates('parcel_no')
         return df
 
@@ -102,105 +104,101 @@ class data_cleaner(object):
         sold_data.index = sold_data['parcel_no'].tolist()
         sold_data = self.duplicate_check(sold_data)
 
+
         df = pd.DataFrame(onsell_data) # 重新创建一个对象
         df.update(sold_data)  # 用已售数据覆盖代收数据
-        df = df.merge(sold_data, on=u'parcel_no', how='left') # 若待售数据缺少已售数据中的一些字段，补上
+        #del sold_data['addition']
+        df = self.left_join(df, sold_data, how='left')
+        #df.merge(sold_data, how='left')
 
         return df
 
-    def data_classify(self, df):
-        sql = 'SELECT `parcel_no` FROM `monitor`'
-        existed_data = self.download_sql(sql) #从数据库中读取全部地块编号，方法有待改进
+    def left_join(self, left, right, how='left'):
+        # 用df的join方法，删除并记录名字重复的列
+        df = left.join(right, how=how, lsuffix='', rsuffix='(*DEL*)')
+        duplicate_col = [s for s in df.columns if (isinstance(s,str) or isinstance(s,unicode)) and re.search(ur'\(\*DEL\*\)', s)]
+        #print [(isinstance(s,str) or isinstance(s,unicode)) and re.search(ur'\(\*DEL\*\)', s) for s in df.columns]
 
-        b = df.isin(existed_data) # 判断哪些地块已经存在于数据库中
-        update_data = df[b==True]
-        insert_data = df[b==False]
-        return update_data, insert_data
 
-    def mysql_ctrl(self, sql, args):
-        with closing(pymysql.connect(ip='192.168.1.124', user='spider', password='startspider',
-                                     dbname='raw_data',  charset='utf8')) as conn:
+        # 记录被删除的数据中不同的数据
+        df0 = pd.DataFrame([])
+        for s in duplicate_col:
+            ser1 = df[re.sub(ur'\(\*DEL\*\)', '',s)]
+            ser2 = df[s]
+            df0 = df0.append(pd.DataFrame({'发生时间':datetime.datetime.now(), 'left': ser1[ser1 != ser2], 'right': ser2[ser1 != ser2]}),ignore_index=True)
+
+        df0.to_csv(os.getcwd() + u'\cleaner_log\被删除的数据.csv', encoding='utf_8_sig',mode='a')
+
+        df = df.drop(duplicate_col, 1)
+        return df
+
+    def data_sync(self, df):
+        sql = 'SELECT * FROM `土地信息spider` WHERE `parcel_no` in (%s)' % (
+              ','.join(['"%s"' %s for s in df['parcel_no'].astype(np.str).tolist()]))
+        data = self.download_sql(sql, '192.168.1.124', 'raw_data')
+        cols = [s for s in df.columns if s in data.columns]
+        print u'data_sync()整理好的数据中的未知字段%s' %[s for s in df.columns if s not in data.columns]
+        data = data[cols]
+        data.update(df)
+
+        b = df.isin(data) # 判断哪些地块已经存在于数据库中
+        insert_data = df[b==False] # 原数据中没有的新数据
+        data = data.append(insert_data)
+
+        return data[cols]
+
+    def mysql_ctrl(self, sql, args=None):
+        with closing(pymysql.connect(host='192.168.1.124', user='spider', password='startspider',
+                                     database='raw_data',  charset='utf8')) as conn:
             with closing(conn.cursor()) as cur:
-                cur.executemany(sql, args)
+                #cur.executemany(sql, args)
+                cur.execute(sql)
 
-    def upload_sql(self, df):
-        with closing(pymysql.connect(ip='192.168.1.124', user='spider', password='startspider',
-                                     dbname='raw_data',  charset='utf8')) as conn:
-            df.to_sql('土地信息spider', conn, if_exists='append')
-
-    def download_sql(self, sql):
-        with closing(pymysql.connect(host='localhost', user='spider',password='startspider',
-                                     database='spider', charset='utf8')) as con:
-            df = pd.read_sql(sql, con)
+    def download_sql(self, sql, host, database):
+        with closing(pymysql.connect(host=host, user='spider',password='startspider',
+                                     database=database, charset='utf8')) as conn:
+            df = pd.read_sql(sql, conn)
         return df
-
-    def update_sql(self, df, lengh = 6):
-        """
-        sql代码太长电脑会卡死，只能分段
-
-
-        构造类似的语句
-        UPDATE categories
-            SET display_order = CASE id
-                WHEN 1 THEN 3
-                WHEN 2 THEN 4
-                WHEN 3 THEN 5
-            END,
-            title = CASE id
-                WHEN 1 THEN 'New Title 1'
-                WHEN 2 THEN 'New Title 2'
-                WHEN 3 THEN 'New Title 3'
-            END
-        WHERE id IN (1,2,3)
-        """
-        title = df.columns.tolist()
-
-        for i in xrange(len(title)/lengh):
-            l = []
-            for t0 in title[i*lengh:(i+1)*lengh]:
-                l0 = ['WHEN "%s" THEN "%s"' %(df.loc[i,'parcel_no'],df.loc[i,t0]) for i in df.index]
-                sql0 = \
-                    """
-                    `%s` = CASE `parcel_no`
-                    %s
-                    END 
-                    """ %(t0, '\n'.join(l))
-                l.append(sql0)
-            sql = \
-                """
-                UPDATE `土地信息spider`
-                    SET
-                    %s
-                WHERE parcel_no IN (%s)
-                """ %(',\n'.join(l), ','.join(df['parcel_no'].astype(np.str).tolist()))
-            log_obj.debug(sql)
-            yield sql.encode('utf8')
 
     def insert_sql(self, df):
-        """
+        df = df.fillna('') # 空白字符填充空值
 
-        """
+        # 三个部分的SQL代码
+
         title = df.columns.tolist()
-        l = []
-        for i in xrange(len(df.index)):
-            l0 = ['"%s"' %s for s in df.loc[i,:].tolist()]
-            l.append('(%s)' %','.join(l0))
-        sql = "INSERT INTO `土地信息spider`(%s) VALUES(%s)" %(','.join(title), ','.join(l))
+        sql0 = ','.join(title)
 
+        #arr = np.ones(df.shape).astype(str)
+        #arr[arr=='1.0'] = '%s'
+        # 将二维列表转化为 ('',''),('',''),('','')
+        sql1 = ','.join(['(%s)' %(','.join(['"%s"' %s for s in l])) for l in np.array(df).tolist()])
+
+        sql2 = ','.join(['%s=VALUES(%s)' %(s,s) for s in title])
+
+        sql = "INSERT INTO `土地信息spider`(%s) VALUES%s ON DUPLICATE KEY UPDATE %s" %(sql0, sql1, sql2)
+
+        data = np.array(df).astype(str).tolist()
+        #pd.DataFrame(arr).to_csv('arr.csv')
+        #pd.DataFrame(data).to_csv('df.csv')
         log_obj.debug(sql)
         return sql
 
-
     def main(self):
         onsell_data, sold_data = self.get_data() # 获取待售和已售数据
-        data = self.merging_data(onsell_data, sold_data) # 将同一地块的待售数据和已售数据整合在一起
+        onsell_data.to_csv(os.getcwd() + '\cleaner_log\(1.1)onsell_data.csv', encoding='utf_8_sig')
+        sold_data.to_csv(os.getcwd() + '\cleaner_log\(1.2)sold_data.csv', encoding='utf_8_sig')
+        # 将同一地块的待售数据和已售数据整合在一起
+        data = self.merging_data(onsell_data, sold_data) #(onsell_data.iloc[:, :5], sold_data.iloc[:, :5])
+        data.to_csv(os.getcwd() + '\cleaner_log\(2)merging_data.csv', encoding='utf_8_sig')
 
-        # 将数据库中已经有的地块添加至update_data，仅更新数据
-        # 将数据库中没有的地块添加至insert_data，插入数据库中
-        update_data, insert_data = self.data_classify(data)
+        # 下载旧数据，地块编号已存在的话，更新，没有则添加
+        data = self.data_sync(data)
+        data.to_csv(os.getcwd() + '\cleaner_log\(3)data_sync.csv', encoding='utf_8_sig')
 
-        update_sql_l = self.update_sql(update_data) # 生成器
-        insert_sql = self.insert_sql(insert_data)
+        sql = self.insert_sql(data)
+        mysql_connecter.connect(sql, dbname='raw_data', ip='192.168.1.124', user='spider', password='startspider')
+        #insert_sql = self.insert_sql(insert_data)
+
 
 if __name__ == '__main__':
     data_cleaner = data_cleaner()
