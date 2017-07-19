@@ -140,3 +140,5 @@ $RECYCLE.BIN/
 *.csv
 # Log files
 *.log
+# DB files
+*.db
