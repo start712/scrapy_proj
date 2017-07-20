@@ -20,7 +20,7 @@ class timer0(object):
     def __init__(self):
         pass
     def main(self):
-        mytimer.cmd_timer('python %s' %(os.getcwd() + r'\controller.py'), 600)
+        mytimer.cmd_timer('python %s' %(os.getcwd() + r'\controller.py'), '9:00', 60*60*24)
 
 if __name__ == '__main__':
     timer0 = timer0()
