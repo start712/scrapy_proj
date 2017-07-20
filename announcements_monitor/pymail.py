@@ -80,6 +80,4 @@ class pymail(object):
 
 if __name__ == '__main__':
     pymail = pymail()
-    s = "WTFWTFWTF"
-
-    pymail.send_mail(None, txt = s )
+    #pymail.try_send_mail(None, "爬虫报告缺少文件", to_mail='736941030@qq.com')

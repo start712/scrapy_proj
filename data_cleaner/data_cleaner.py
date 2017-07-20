@@ -187,6 +187,9 @@ class data_cleaner(object):
         #pd.DataFrame(data).to_csv('df.csv')
         return sql
 
+    def mark_sql(self,df):
+        pass
+
     def main(self):
         onsell_data, sold_data = self.get_data() # 获取待售和已售数据
         onsell_data.to_csv(os.getcwd() + '\cleaner_log\(1.1)onsell_data.csv', encoding='utf_8_sig')
@@ -202,10 +205,14 @@ class data_cleaner(object):
         data = self.data_clean(data)
         data.to_csv(os.getcwd() + '\cleaner_log\(4)data_clean.csv', encoding='utf_8_sig')
 
+        # 组织sql语言，上传整理好的数据
         sql = self.insert_sql(data)
         log_obj.debug(sql)
         mysql_connecter.connect(sql, dbname='raw_data', ip='192.168.1.124', user='spider', password='startspider')
         #insert_sql = self.insert_sql(insert_data)
+
+        # 将已清洗的数据做上标记
+        self.mark_sql(data)
 
 
 if __name__ == '__main__':
