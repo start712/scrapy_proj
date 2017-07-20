@@ -68,7 +68,7 @@ class controller(object):
             self.pymail.try_send_mail(report_file, "发现新的公告！！", txt=s, to_mail='736941030@qq.com')
             self.pymail.try_send_mail(report_file, "发现新的公告！！", txt=s, to_mail='3118734521@qq.com')
 
-            print u"有新的公告！！！已存入NEW.csv!!!!\n" * 3
+            print u"NEW.csv已发送!!!!\n" * 3
 
         else:
             print u"没有发现新的内容！\n" * 3

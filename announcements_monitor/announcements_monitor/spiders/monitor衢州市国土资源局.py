@@ -82,6 +82,7 @@ class Spider(scrapy.Spider):
                 log_obj.update_error("%s中无法解析\n原因：%s" %(self.name, traceback.format_exc()))
 
     def parse1(self, response):
+        """onsell"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
         item['parcel_status'] = 'onsell'
@@ -117,6 +118,7 @@ class Spider(scrapy.Spider):
             yield response.meta['item']
 
     def parse2(self, response):
+        """sold"""
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
         item['parcel_status'] = 'sold'
