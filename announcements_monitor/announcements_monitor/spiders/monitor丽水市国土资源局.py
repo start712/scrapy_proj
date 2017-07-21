@@ -33,8 +33,15 @@ with open(os.getcwd() + r'\announcements_monitor\spiders\needed_data.txt', 'r') 
     needed_data = s.split(',')
 needed_data = [s.encode('utf8') for s in needed_data]
 
-re_type = {
+re_text = {
+    'parcel_location':ur'土地坐落：.+?。',
+    'purpose':ur'土地用途：.+?。',
+    '出让年限':ur'出让年限：.+?。'
+}
+
+re_table = {
     u'土地坐落':'parcel_location',
+    u'地块位置':'parcel_location',
     u'土地用途':'purpose',
     u'土地面积':'offer_area_m2',
     u'容积率':'plot_ratio',
@@ -82,10 +89,10 @@ class Spider(scrapy.Spider):
             extra_data = False
             e_ps = e_page.find_all('p')
             row_ps = [e_p.get_text(strip=True) for e_p in e_ps]
-            d = {rs:[] for rs in re_type}
+            d = {rs:[] for rs in re_text}
             for row_s in row_ps:
-                for rs in re_type:
-                    m = re.search(re_type[rs], row_s)
+                for rs in re_text:
+                    m = re.search(re_text[rs], row_s)
                     if m:
                         d[rs].append(m.group())
                         extra_data = True
@@ -94,8 +101,8 @@ class Spider(scrapy.Spider):
             e_table = e_page.table
             df = html_table_reader.standardize(html_table_reader.table_tr_td(e_table), delimiter='=>')
             #log_obj.update_error(df.to_string())
-            for k in re_type:
-                df.columns = map(lambda x:re_type[re.search(ur'%s' %k, x).group()] if re.search(ur'%s' %k, x)
+            for k in re_table:
+                df.columns = map(lambda x:re_table[re.search(ur'%s' %k, x).group()] if re.search(ur'%s' %k, x)
                                  else x, df.columns)
             for i in xrange(len(df.index)):
                 detail = df.iloc[i,:].to_dict()
