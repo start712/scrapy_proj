@@ -154,10 +154,13 @@ class data_cleaner(object):
         return data[cols]
 
     def data_clean(self, df):
+        df = df.fillna('')
         if 'parcel_no' in df.columns:
             del df['parcel_no']
         df0 = copy.deepcopy(df)
 
+        if 'plot_ratio' in df.columns:
+            df['plot_ratio'] = df['plot_ratio'].apply(self.plot_ratio_cleaner)
         if 'offer_area_m2' in df.columns:
             df['offer_area_m2'] = df['offer_area_m2'].apply(lambda x:re.search(ur'\d+[\.]*\d*', x).group() if isinstance(x,unicode) and re.search(ur'\d+[\.]*\d*', x) else x)
         if 'addition' in df.columns:
@@ -165,6 +168,31 @@ class data_cleaner(object):
 
         self.check_diff(df0,df) # 输出修改日志
         return df
+
+    def plot_ratio_cleaner(self, s):
+        res = -100
+        s = str(s)
+        # (1)搜索所有带百分号的数字，然后返回最大值除以100
+        comp = re.compile(r'\d+(?=%)')
+        if comp.search(s):
+            res = float(max(comp.findall(s)))/100
+        # (2)搜索【数字+“号”字】的模式，返回空白
+        comp = re.compile(r'\d+号')
+        if comp.search(s):
+            return ''
+        # (3)搜索所有可能带小数点的数字，以数组形式返回，若数组中数字个数大于2个，
+        # 返回空白，否则返回最大的那个数字
+        comp = re.compile(r'\d+\.*\d*')
+        if comp.search(s):
+            if len(comp.findall(s)) > 2:
+                return ''
+            else:
+                res = max(comp.findall(s))
+        # (4)若有结果，但是结果大于10，返回空白
+        res = float(res)
+        if res < 0 or res > 10:
+            return ''
+        return res
 
     def check_diff(self,old,new):
         old.to_csv(os.getcwd() + ur'\cleaner_log\old.csv', encoding='utf_8 _sig')
