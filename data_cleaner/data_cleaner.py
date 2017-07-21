@@ -13,6 +13,7 @@ import os
 import json
 import traceback
 import datetime
+import copy
 
 import datetime
 
@@ -135,22 +136,48 @@ class data_cleaner(object):
     def data_sync(self, df):
         sql = 'SELECT * FROM `土地信息spider` WHERE `parcel_no` in (%s)' % (
               ','.join(['"%s"' %s for s in df['parcel_no'].astype(np.str).tolist()]))
+        # 旧数据
         data = self.download_sql(sql, '192.168.1.124', 'raw_data')
+        data.index = data['parcel_no']
         #data.to_csv(os.getcwd() + '\cleaner_log\(3.1)data_sync.csv', encoding='utf_8_sig')
+        # 统一字段
         cols = [s for s in df.columns if s in data.columns]
         print u'data_sync()整理好的数据中的未知字段%s' %[s for s in df.columns if s not in data.columns]
         data = data[cols]
+        # 更新旧数据
         data.update(df)
 
-        b = df.isin(data) # 判断哪些地块已经存在于数据库中
+        b = df.index.isin(data.index) # 判断哪些地块已经存在于数据库中
         insert_data = df[b==False] # 原数据中没有的新数据
         data = data.append(insert_data)
 
         return data[cols]
 
     def data_clean(self, df):
-        df['addition'] = df['addition'].apply(lambda x:','.join(map(lambda x0,y0:'%s:%s' %(x0,y0),x.viewkeys(),x.viewvalues()) if isinstance(x,dict) else ''))
+        if 'parcel_no' in df.columns:
+            del df['parcel_no']
+        df0 = copy.deepcopy(df)
+
+        if 'offer_area_m2' in df.columns:
+            df['offer_area_m2'] = df['offer_area_m2'].apply(lambda x:re.search(ur'\d+[\.]*\d*', x).group() if isinstance(x,unicode) and re.search(ur'\d+[\.]*\d*', x) else x)
+        if 'addition' in df.columns:
+            df['addition'] = df['addition'].apply(lambda x:','.join(map(lambda x0,y0:'%s:%s' %(x0,y0),x.viewkeys(),x.viewvalues()) if isinstance(x,dict) else ''))
+
+        self.check_diff(df0,df) # 输出修改日志
         return df
+
+    def check_diff(self,old,new):
+        old.to_csv(os.getcwd() + ur'\cleaner_log\old.csv', encoding='utf_8 _sig')
+        new.to_csv(os.getcwd() + ur'\cleaner_log\new.csv', encoding='utf_8 _sig')
+        log_df = pd.DataFrame({})
+        b = old==new
+        for col in new.columns:
+            #print col, np.all(np.array(b[col]))
+            if not np.all(np.array(b[col])):
+                df0 = pd.DataFrame([new[col][b[col]==False],old[col][b[col]==False]]).T
+                df0.columns = ['new', 'old']
+                log_df = log_df.append(df0)
+        log_df.to_csv(os.getcwd() + ur'\cleaner_log\data_clean_log.csv', encoding='utf_8 _sig')
 
     def mysql_ctrl(self, sql, args=None):
         with closing(pymysql.connect(host='192.168.1.124', user='spider', password='startspider',
