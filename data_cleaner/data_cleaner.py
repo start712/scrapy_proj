@@ -158,9 +158,11 @@ class data_cleaner(object):
         if 'parcel_no' in df.columns:
             del df['parcel_no']
         df0 = copy.deepcopy(df)
-
+#starting_price_sum
         if 'plot_ratio' in df.columns:
             df['plot_ratio'] = df['plot_ratio'].apply(self.plot_ratio_cleaner)
+        if 'starting_price_sum' in df.columns:
+            df['starting_price_sum'] = df['starting_price_sum'].apply(lambda x:re.search(ur'\d+[\.]*\d*', x).group() if isinstance(x,unicode) and re.search(ur'\d+[\.]*\d*', x) else x)
         if 'offer_area_m2' in df.columns:
             df['offer_area_m2'] = df['offer_area_m2'].apply(lambda x:re.search(ur'\d+[\.]*\d*', x).group() if isinstance(x,unicode) and re.search(ur'\d+[\.]*\d*', x) else x)
         if 'addition' in df.columns:
