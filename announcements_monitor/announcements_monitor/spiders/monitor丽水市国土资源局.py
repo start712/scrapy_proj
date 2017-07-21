@@ -16,6 +16,7 @@ import traceback
 import datetime
 import bs4
 import json
+
 log_path = r'%s/log/spider_DEBUG(%s).log' %(os.getcwd(),datetime.datetime.date(datetime.datetime.today()))
 
 sys.path.append(sys.prefix + "\\Lib\\MyWheels")
@@ -23,7 +24,8 @@ sys.path.append(os.getcwd())
 reload(sys)
 sys.setdefaultencoding('utf8')
 import spider_log  ########
-
+import html_table_reader
+html_table_reader = html_table_reader.html_table_reader()
 log_obj = spider_log.spider_log() #########
 
 with open(os.getcwd() + r'\announcements_monitor\spiders\needed_data.txt', 'r') as f:
@@ -32,24 +34,14 @@ with open(os.getcwd() + r'\announcements_monitor\spiders\needed_data.txt', 'r') 
 needed_data = [s.encode('utf8') for s in needed_data]
 
 re_type = {
-    'parcel_location':ur'土地坐落：.+?。',
-    'purpose':ur'土地用途：.+?。',
-    '出让年限':ur'出让年限：.+?。'
+    u'土地坐落':'parcel_location',
+    u'土地用途':'purpose',
+    u'土地面积':'offer_area_m2',
+    u'容积率':'plot_ratio',
+    u'起始价':'starting_price_sum',
+    u'建筑面积':'building_area'
 }
-title_type1 = {7:['parcel_location', 'offer_area_m2', 'plot_ratio', '建筑密度（%）'
-               '绿地率（%）', 'starting_price_sum', '保证金(万元)'],
-               8:['序号', 'parcel_no', 'offer_area_m2', 'purpose',
-                   'plot_ratio', '建筑密度', '绿地率',  'starting_price_sum', '保证金(万元)'],
-               9:['parcel_location', 'offer_area_m2', 'purpose', 'plot_ratio', '建筑密度（%）'
-               '绿地率（%）', '出让年限(年)', 'starting_price_sum', '保证金(万元)'],
-               11:['序号', 'parcel_location', 'parcel_name', 'offer_area_m2', 'purpose',
-                   '出让年限(年)', 'plot_ratio', '建筑密度（%）', '绿地率（%）',  'starting_price_sum',
-                   '保证金(万元)'],
-               12:['parcel_location', 'offer_area_m2', 'purpose', 'plot_ratio', '建筑密度（%）'
-               '绿地率（%）', '出让年限(年)', '投资强度（万元/亩）', '土地产出（万元/亩）',
-                '土地税收(万元)', 'starting_price_sum', '保证金(万元)'],
-               }
-title_height1 = {7:1, 8:1, 9:2, 11:1, 12:2}
+
 class Spider(scrapy.Spider):
     name = "511712"
 
@@ -100,18 +92,13 @@ class Spider(scrapy.Spider):
 
             # 处理网页中的表格
             e_table = e_page.table
-            e_trs = e_table.find_all('tr')
-            test_row = e_trs[-1].find_all('td')
-            #if len(test_row) not in title_type1:
-            #    raise
-            e_trs = e_trs[title_height1[len(test_row)]:]
-            for i in xrange(len(e_trs)):
-                e_tr = e_trs[i]
-                e_tds = e_tr.find_all('td')
-                title = title_type1[len(e_tds)]
-                row = [e_td.get_text(strip=True) for e_td in e_tds]
-
-                detail = dict(zip(title,row))
+            df = html_table_reader.standardize(html_table_reader.table_tr_td(e_table), delimiter='=>')
+            #log_obj.update_error(df.to_string())
+            for k in re_type:
+                df.columns = map(lambda x:re_type[re.search(ur'%s' %k, x).group()] if re.search(ur'%s' %k, x)
+                                 else x, df.columns)
+            for i in xrange(len(df.index)):
+                detail = df.iloc[i,:].to_dict()
                 if extra_data:
                     d0 = {key:d[key][i] for key in d}
                     detail.update(d0)
