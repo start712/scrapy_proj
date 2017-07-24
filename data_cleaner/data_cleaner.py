@@ -158,15 +158,21 @@ class data_cleaner(object):
         if 'parcel_no' in df.columns:
             del df['parcel_no']
         df0 = copy.deepcopy(df)
-#starting_price_sum
+
         if 'plot_ratio' in df.columns:
             df['plot_ratio'] = df['plot_ratio'].apply(self.plot_ratio_cleaner)
         if 'starting_price_sum' in df.columns:
             df['starting_price_sum'] = df['starting_price_sum'].apply(lambda x:re.search(ur'\d+[\.]*\d*', x).group() if isinstance(x,unicode) and re.search(ur'\d+[\.]*\d*', x) else x)
         if 'offer_area_m2' in df.columns:
+            df['offer_area_m2'] = df['offer_area_m2'].apply(lambda x:re.sub(r'\s+', '', x) if isinstance(x,unicode) and re.search(ur'\d+[\.]*\d*', x) else x)
             df['offer_area_m2'] = df['offer_area_m2'].apply(lambda x:re.search(ur'\d+[\.]*\d*', x).group() if isinstance(x,unicode) and re.search(ur'\d+[\.]*\d*', x) else x)
+        if 'building_area' in df.columns:
+            df['building_area'] = df['building_area'].apply(self.building_area_cleaner)
+        if 'transaction_price_sum' in df.columns:
+            df['transaction_price_sum'] = df['transaction_price_sum'].apply(lambda x:re.search(ur'\d+[\.]*\d*', x).group() if isinstance(x,unicode) and re.search(ur'\d+[\.]*\d*', x) else x)
         if 'addition' in df.columns:
             df['addition'] = df['addition'].apply(lambda x:','.join(map(lambda x0,y0:'%s:%s' %(x0,y0),x.viewkeys(),x.viewvalues()) if isinstance(x,dict) else ''))
+
 
         self.check_diff(df0,df) # 输出修改日志
         return df
@@ -195,6 +201,18 @@ class data_cleaner(object):
         if res < 0 or res > 10:
             return ''
         return res
+
+    def building_area_cleaner(self, s):
+        s = str(s)
+        # (1)搜索带有地上面积字符串
+        m = re.search(ur'(?<=地上).*?\d+[\.]*\d*', s)
+        if m:
+            return re.search(ur'\d+[\.]*\d*', m.group()).group()
+        # (2)搜索所有带小数点的数字，返回最大值
+        if re.search(u'\d+[\.]*\d*', s):
+            return float(max(re.findall(u'\d+[\.]*\d*', s)))
+        else:
+            return s
 
     def check_diff(self,old,new):
         old.to_csv(os.getcwd() + ur'\cleaner_log\old.csv', encoding='utf_8 _sig')
@@ -265,7 +283,7 @@ class data_cleaner(object):
         # 组织sql语言，上传整理好的数据
         sql = self.insert_sql(data)
         log_obj.debug(sql)
-        mysql_connecter.connect(sql, dbname='raw_data', ip='192.168.1.124', user='spider', password='startspider')
+        #mysql_connecter.connect(sql, dbname='raw_data', ip='192.168.1.124', user='spider', password='startspider')
         #insert_sql = self.insert_sql(insert_data)
 
         # 将已清洗的数据做上标记
