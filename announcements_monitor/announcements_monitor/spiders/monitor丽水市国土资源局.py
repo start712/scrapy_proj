@@ -111,7 +111,7 @@ class Spider(scrapy.Spider):
                     detail.update(d0)
                 content_detail = {'addition':{}}
                 for key in detail:
-                    if key in needed_data:
+                    if key in re_table.viewvalues():
                         content_detail[key] = detail[key]
                     else:
                         content_detail['addition'][key] = detail[key]
