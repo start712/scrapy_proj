@@ -53,7 +53,7 @@ class Spider(scrapy.Spider):
     name = "511712"
 
     def start_requests(self):
-        # 台州相应网址的index的系数，index_1代表第二页
+        # 丽水相应网址的index的系数，index_1代表第二页
         self.urls1 = ["http://www.lssgtzyj.gov.cn/ArticleList/Index/284?pageIndex=%s&title=" %i for i in xrange(3) if i > 0]
         #self.urls2 = ["http://www.zjtzgtj.gov.cn/scxx/tdsc/tdcrcj/index_%s.html" %i for i in xrange(3) if i > 0]
 
@@ -99,11 +99,12 @@ class Spider(scrapy.Spider):
 
             # 处理网页中的表格
             e_table = e_page.table
-            df = html_table_reader.standardize(html_table_reader.table_tr_td(e_table), delimiter='=>')
+            df = html_table_reader.title_standardize(html_table_reader.table_tr_td(e_table), delimiter=r'=>')
             #log_obj.update_error(df.to_string())
             for k in re_table:
                 df.columns = map(lambda x:re_table[re.search(ur'%s' %k, x).group()] if re.search(ur'%s' %k, x)
                                  else x, df.columns)
+            log_obj.update_error(df.to_string().encode('utf8'))
             for i in xrange(len(df.index)):
                 detail = df.iloc[i,:].to_dict()
                 if extra_data:
@@ -116,7 +117,12 @@ class Spider(scrapy.Spider):
                     else:
                         content_detail['addition'][key] = detail[key]
 
-                content_detail['parcel_no'] = re.search(ur'丽土.+?号', item['monitor_title']).group()
+                item['parcel_no'] = re.search(ur'丽土.+?号', item['monitor_title']).group()
+                if len(df.index) > 1:
+                    if 'parcel_name' not in content_detail:
+                        item['parcel_no'] = item['parcel_no'] + ('|%s|' %i)
+                    else:
+                        item['parcel_no'] = item['parcel_no'] + ('|%s|' % content_detail['parcel_name'])
                 item['content_detail'] = content_detail
                 yield item
         except:
