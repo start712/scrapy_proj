@@ -79,55 +79,17 @@ class Spider(scrapy.Spider):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
         item['parcel_status'] = 'onsell'
-        try:
-            e_table = bs_obj.find('table')
 
-            e_trs = e_table.find_all('tr')[2:]
-            for e_tr in e_trs:
-                title = title_type1
-
-                e_tds = e_tr.find_all('td')
-                row = [e_td.get_text(strip=True) for e_td in e_tds]
-
-                detail = dict(zip(title,row))
-                content_detail = {'addition':{}}
-                for key in detail:
-                    if key in needed_data:
-                        content_detail[key] = detail[key]
-                    else:
-                        content_detail['addition'][key] = detail[key]
-
-                item['content_detail'] = content_detail
-                yield item
-        except:
-            log_obj.error(item['monitor_url'], "%s（%s）中无法解析\n%s" %(self.name, response.url, traceback.format_exc()))
-            yield response.meta['item']
 
     def parse2(self, response):
         bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
         item = response.meta['item']
         item['parcel_status'] = 'sold'
-        try:
-            e_table = bs_obj.find('table')
-            e_trs = e_table.find_all('tr')[1:]
-            for e_tr in e_trs:
-                title = title_type2
 
-                e_tds = e_tr.find_all('td')
-                row = [e_td.get_text(strip=True) for e_td in e_tds]
+    def parse3(self, response):
+        bs_obj = bs4.BeautifulSoup(response.text, 'html.parser')
+        item = response.meta['item']
+        item['parcel_status'] = 'update'
 
-                detail = dict(zip(title, row))
-                content_detail = {'addition': {}}
-                for key in detail:
-                    if key in needed_data:
-                        content_detail[key] = detail[key]
-                    else:
-                        content_detail['addition'][key] = detail[key]
-
-                item['content_detail'] = content_detail
-                yield item
-        except:
-            log_obj.error(item['monitor_url'], "%s（%s）中无法解析\n%s" % (self.name, response.url, traceback.format_exc()))
-            yield response.meta['item']
 if __name__ == '__main__':
     pass
