@@ -41,13 +41,13 @@ title_type2 = ['parcel_no', 'parcel_location', 'offer_area_m2', 'purpose',
                'plot_ratio', '出让年限', 'competitive_person', 'transaction_price_sum', '成交时间']
 
 class Spider(scrapy.Spider):
-    name = "511711"
+    name = "511714"
 
     def start_requests(self):
-        # 台州相应网址的index的系数，index_1代表第二页
+        # 临安相应网址的index的系数，index_1代表第二页
         self.urls1 = ["http://www.linan.gov.cn/gtzyj/gsgg/tdzpgcrgg/index.html", ] + ["http://www.linan.gov.cn/gtzyj/gsgg/tdzpgcrgg/index_%s.html" %i for i in xrange(3) if i > 1]
-        self.urls2 = ["http://www.linan.gov.cn/gtzyj/gsgg/tdcrjggs/index.html", ] + ["http://www.linan.gov.cn/gtzyj/gsgg/tdcrjggs/index_%s.html" %i for i in xrange(3) if i > 1]
-        self.urls2 = ["http://www.linan.gov.cn/gtzyj/gsgg/cjxx/index.html", ] + ["http://www.linan.gov.cn/gtzyj/gsgg/cjxx/index_%s.html" % i for i in xrange(3) if i > 1]
+        self.urls2 = ["http://www.linan.gov.cn/gtzyj/gsgg/tdcrcjgs/index.html", ] + ["http://www.linan.gov.cn/gtzyj/gsgg/tdcrcjgs/index_%s.html" %i for i in xrange(3) if i > 1]
+        self.urls3 = ["http://www.linan.gov.cn/gtzyj/gsgg/cjxx/index.html", ] + ["http://www.linan.gov.cn/gtzyj/gsgg/cjxx/index_%s.html" % i for i in xrange(3) if i > 1]
         for url in self.urls1 + self.urls2 + self.urls3:
             yield scrapy.Request(url=url, callback=self.parse)
 
